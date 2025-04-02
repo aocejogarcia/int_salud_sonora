@@ -1,7 +1,10 @@
 # SINAVE (Sistema Nacional de Vigilancia Epidemiológica)
 **Análisis de datos de los Sistemas de Vigilancia Epidemiológica de la Secretaría de Salud Sonora**
 
+
 Información dividida por carpetas, de la siguiente manera:
+
+
 
 **DENGUE:** Enfermedades Transmitidas por Vector-Dengue.  
 
