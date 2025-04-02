@@ -23,6 +23,9 @@ Glosario:
 </ul>
 
 
-<footer>
-[Plataforma SINAVE](https://www.sinave.gob.mx) 
-</footer>
+
+
+
+
+> ![Plataforma SINAVE](https://www.sinave.gob.mx/imagenes4t/imagen10_.png)
+> [Link de acceso a plataforma](https://www.sinave.gob.mx) 
