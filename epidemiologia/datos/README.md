@@ -22,4 +22,7 @@ Glosario:
 
 </ul>
 
+
+<footer>
 [Plataforma SINAVE](https://www.sinave.gob.mx) 
+</footer>
