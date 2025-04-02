@@ -14,7 +14,7 @@ En América, los países que tienen los cuatro serotipos del virus (DEN1, DEN2, 
 | Caso Confirmado de DG | Todo caso probable en el que se confirme infección reciente por dengue virus mediante técnicas de laboratorio reconocidas por el InDRE. | 
 | Caso Descartado de Dengue | Todo caso probable en el que no se confirme infección reciente por dengue virus mediante técnicas de laboratorio reconocidas por el InDRE. |
 
-  Fuente. _Manual_
+  Fuente. _Manual de procedimientos estandarizados para la vigilancia epidemiológica de las enfermedades transmitidas por vector._
 
 
-## Catálogo de variables
+
