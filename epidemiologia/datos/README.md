@@ -3,8 +3,6 @@
 
 Información dividida por carpetas, de la siguiente manera:
 
-Glosario:
-
 **DENGUE:** Enfermedades Transmitidas por Vector-Dengue.  
 
 **FMRR:** Enfermedades Transmitidas por Vector-Fiebre Manchada por Rickettsia Rickettsi.  
