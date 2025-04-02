@@ -21,3 +21,5 @@ Glosario:
 * [Lineamiento Estandarizado para la Vigilancia Epidemiológica y por laboratorio de la Enfermedad Respiratoria Viral - Septiembre 2023](https://www.gob.mx/cms/uploads/attachment/file/636504/Lineamiento_Estandarizado_Para_La_Vigilancia_Epidemiol_gica_Y_Por_Laboratorio_De_La_Enfermedad_Respiratoria_Viral_-_Septiembre_2023.pdf)
 
 </ul>
+
+[Plataforma SINAVE](https://www.sinave.gob.mx) 
