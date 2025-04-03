@@ -18,16 +18,16 @@ library(plotly)
 library(stringr)
 
 if (Sys.Date() == floor_date(Sys.Date(), 'week') + 1) {
-  actual <- paste('data/DENGUE2_', format(floor_date(Sys.Date(), 'week') + 1, '%d%m%y'), '.txt', sep = '')
-  anterior <- paste('data/DENGUE2_', format(floor_date(Sys.Date(), 'week') - 6, '%d%m%y'), '.txt', sep = '')
+  actual <- paste('epidemiologia/datos/dengue/DENGUE2_', format(floor_date(Sys.Date(), 'week') + 1, '%d%m%y'), '.txt', sep = '')
+  anterior <- paste('epidemiologia/datos/dengue/DENGUE2_', format(floor_date(Sys.Date(), 'week') - 6, '%d%m%y'), '.txt', sep = '')
 } else {
-  anterior <- paste('data/DENGUE2_', format(floor_date(Sys.Date(), 'week') + 1, '%d%m%y'), '.txt', sep = '')
-  actual <- paste('data/DENGUE2_', format(Sys.Date(), '%d%m%y'), '.txt', sep = '')
+  anterior <- paste('epidemiologia/datos/dengue/DENGUE2_', format(floor_date(Sys.Date(), 'week') + 1, '%d%m%y'), '.txt', sep = '')
+  actual <- paste('epidemiologia/datos/dengue/DENGUE2_', format(Sys.Date(), '%d%m%y'), '.txt', sep = '')
 }
 
 dengue_actual <- read_delim(actual, delim = '|', locale = locale(encoding = 'latin1'), comment = '', quote = '') %>% mutate(CERTIFICADO_DEFUNCION = as.numeric(CERTIFICADO_DEFUNCION), IDE_TEL = as.numeric(IDE_TEL), IDE_CP = as.numeric(IDE_CP)) %>% 
   bind_rows(
-    read_delim('data/DENGUE2_20240225.txt', delim = '|', locale = locale(encoding = 'latin1'), comment = '', quote = '') %>% mutate(IDE_TEL = as.numeric(IDE_TEL), TELFONO_TRABAJO = as.numeric(TELFONO_TRABAJO))
+    read_delim('epidemiologia/datos/dengue/DENGUE2_20240225.txt', delim = '|', locale = locale(encoding = 'latin1'), comment = '', quote = '') %>% mutate(IDE_TEL = as.numeric(IDE_TEL), TELFONO_TRABAJO = as.numeric(TELFONO_TRABAJO))
     ) %>% 
   mutate(IDE_COL = str_remove_all(IDE_COL, pattern = ' Colonia| Pueblo| Ranchería| Ampliación| Fraccionamiento| Ejido| Residencial| Congregación| Unidad habitacional| Hacienda| Equipamiento| Poblado comunal| Zona federal'),
          DES_MPO_RES = str_squish(str_remove(DES_MPO_RES, pattern = " SON")),
@@ -65,7 +65,7 @@ dengue_actual <- read_delim(actual, delim = '|', locale = locale(encoding = 'lat
 dengue_anterior <- read_delim(anterior, delim = '|', locale = locale(encoding = 'latin1'), comment = '', quote = '') %>% 
   mutate(CERTIFICADO_DEFUNCION = as.numeric(CERTIFICADO_DEFUNCION), IDE_TEL = as.numeric(IDE_TEL), IDE_CP = as.numeric(IDE_CP)) %>%
   bind_rows(
-    read_delim('data/DENGUE2_20240225.txt', delim = '|', locale = locale(encoding = 'latin1'), comment = '', quote = '') %>% mutate(IDE_TEL = as.numeric(IDE_TEL), TELFONO_TRABAJO = as.numeric(TELFONO_TRABAJO))
+    read_delim('epidemiologia/datos/dengue/DENGUE2_20240225.txt', delim = '|', locale = locale(encoding = 'latin1'), comment = '', quote = '') %>% mutate(IDE_TEL = as.numeric(IDE_TEL), TELFONO_TRABAJO = as.numeric(TELFONO_TRABAJO))
 ) %>% 
     mutate(CVE_DEFUNCION = case_when(
       IDE_ID %in% c(1011171) ~ 9, 
@@ -152,7 +152,7 @@ bol <- bol %>%
 
 openxlsx::write.xlsx(bol, 'dengue nacional.xlsx', overwrite = T)
 
-nacional <- read_csv('data/00_Pob_Mitad_1950_2070.csv', locale = locale(encoding = 'UTF-8'), comment = '', quote = '') %>% 
+nacional <- read_csv('epidemiologia/00_Pob_Mitad_1950_2070.csv', locale = locale(encoding = 'UTF-8'), comment = '', quote = '') %>% 
   filter(AÑO == as.numeric(format(Sys.Date(), '%Y')),
          ENTIDAD == "República Mexicana") %>%
   summarise(poblacion = sum(POBLACION, na.rm = T))
@@ -296,7 +296,7 @@ casos_sector <- dengue_actual %>%
   dplyr::select(DES_INS_UNIDAD, `No Fatal`, Defunción)
 #write.csv(casos_sector, 'casos por sector.csv', row.names = F)
 
-poblaciones <- read_csv('data/base_municipios_sonora.csv') %>% 
+poblaciones <- read_csv('epidemiologia/base_municipios_sonora.csv') %>% 
     group_by(MUN) %>%
   summarise(poblacion = sum(POB, na.rm = T)) %>%
   mutate(MUN = str_to_upper(MUN, locale = 'en'))
@@ -329,7 +329,7 @@ signos <- dengue_actual %>%
 
 
 ```{r, echo=FALSE, message=F, warning=F}
-son <- st_read(dsn = "../covid/muni_2018gw.shp", quiet = TRUE) %>%
+son <- st_read(dsn = "epidemiologia/muni_2018gw.shp", quiet = TRUE) %>%
   filter(NOM_ENT == "Sonora") %>%
   mutate(MUN = stri_trans_general(str = str_to_upper(NOM_MUN, locale = 'en'), id = "Latin-ASCII")) %>%
   st_transform(4326)
