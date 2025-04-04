@@ -329,7 +329,7 @@ signos <- dengue_actual %>%
 
 
 ```{r, echo=FALSE, message=F, warning=F}
-son <- st_read(dsn = "epidemiologia/muni_2018gw.shp", quiet = TRUE) %>%
+son <- st_read(dsn = "epidemiologia/muni_2018gw/muni_2018gw.shp", quiet = TRUE) %>%
   filter(NOM_ENT == "Sonora") %>%
   mutate(MUN = stri_trans_general(str = str_to_upper(NOM_MUN, locale = 'en'), id = "Latin-ASCII")) %>%
   st_transform(4326)
