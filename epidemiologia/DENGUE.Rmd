@@ -150,9 +150,9 @@ bol <- bol %>%
   arrange(desc(TOTAL)) %>% 
   mutate(ESTADO = fct_inorder(ESTADO, ordered = T))
 
-openxlsx::write.xlsx(bol, 'dengue nacional.xlsx', overwrite = T)
+openxlsx::write.xlsx(bol, 'datos/dengue/dengue nacional.xlsx', overwrite = T)
 
-nacional <- read_csv('epidemiologia/00_Pob_Mitad_1950_2070.csv', locale = locale(encoding = 'UTF-8'), comment = '', quote = '') %>% 
+nacional <- read_csv('00_Pob_Mitad_1950_2070.csv', locale = locale(encoding = 'UTF-8'), comment = '', quote = '') %>% 
   filter(AÑO == as.numeric(format(Sys.Date(), '%Y')),
          ENTIDAD == "República Mexicana") %>%
   summarise(poblacion = sum(POBLACION, na.rm = T))
@@ -172,7 +172,7 @@ dengue_actual %>%
   ungroup() %>%
   dplyr::select(-Confirmados, -Descartados) %>%
   pivot_wider(values_from = Probables, names_from = Semana, values_fill = 0) %>%
-  openxlsx::write.xlsx('Estudiados por municipio2.xlsx', overwrite = T)
+  openxlsx::write.xlsx('datos/dengue/Estudiados por municipio2.xlsx', overwrite = T)
 
 
 dengue_actual %>%
@@ -183,14 +183,14 @@ dengue_actual %>%
   replace(is.na(.), 0) %>% 
   mutate(Positividad = Confirmados/(Confirmados + Descartados)) %>%
   mutate(Estimados = round(Confirmados + (Probables*Positividad), 0)) %>% 
-  openxlsx::write.xlsx('Positividad - estimados dengue.xlsx', overwrite = T)
+  openxlsx::write.xlsx('datos/dengue/Positividad - estimados dengue.xlsx', overwrite = T)
 
 dengue_actual %>% 
   filter(ESTATUS_CASO %in% c(1,2), year(floor_date(FEC_CAPTURA, 'week') + 3) == year(Sys.Date())) %>% 
   count(semana = epiweek(FEC_CAPTURA)) %>% 
   right_join(tibble(semana = seq(1,52))) %>%
   arrange(semana) %>% 
-  openxlsx::write.xlsx('probables y confirmados.xlsx', overwrite = T)
+  openxlsx::write.xlsx('datos/dengue/probables y confirmados.xlsx', overwrite = T)
 
 ```
 
@@ -233,7 +233,7 @@ ESTUDIADOS <- dengue_actual %>%
   filter(!IDE_ID %in% dengue_anterior$IDE_ID)
 ESTUDIADOS %>% 
   count(DES_MPO_REP, FECHA_TOMA_MUESTRA, ESTATUS_CASO) %>% 
-  write.csv('Estudiados_dengue.csv', fileEncoding = 'latin1')
+  write.csv('datos/dengue/Estudiados_dengue.csv', fileEncoding = 'latin1')
 
 semana <- tibble(`Casos confirmados` = nrow(CC),
                  `Defunciones` = nrow(DEF)
@@ -296,10 +296,16 @@ casos_sector <- dengue_actual %>%
   dplyr::select(DES_INS_UNIDAD, `No Fatal`, Defunción)
 #write.csv(casos_sector, 'casos por sector.csv', row.names = F)
 
-poblaciones <- read_csv('epidemiologia/base_municipios_sonora.csv') %>% 
-    group_by(MUN) %>%
+poblaciones <- openxlsx::read.xlsx('base_municipios_sonora.xlsx') %>%
+  filter(AÑO == year(Sys.Date())) %>% 
+  mutate(CLAVE = CLAVE - 26000) %>% 
+  group_by(CLAVE, MUN) %>%
   summarise(poblacion = sum(POB, na.rm = T)) %>%
-  mutate(MUN = str_to_upper(MUN, locale = 'en'))
+  mutate(MUN = stri_trans_general(str = str_to_upper(MUN, locale = 'en'), id = "Latin-ASCII")) %>% 
+  mutate(MUN = case_when(
+    MUN == 'PUERTO PENASCO' ~ 'PUERTO PEÑASCO',
+    T ~ MUN
+  ))
 
 signos <- dengue_actual %>%
   filter(ESTATUS_CASO == 2) %>%
@@ -329,7 +335,7 @@ signos <- dengue_actual %>%
 
 
 ```{r, echo=FALSE, message=F, warning=F}
-son <- st_read(dsn = "epidemiologia/muni_2018gw/muni_2018gw.shp", quiet = TRUE) %>%
+son <- st_read(dsn = "muni_2018gw/muni_2018gw.shp", quiet = TRUE) %>%
   filter(NOM_ENT == "Sonora") %>%
   mutate(MUN = stri_trans_general(str = str_to_upper(NOM_MUN, locale = 'en'), id = "Latin-ASCII")) %>%
   st_transform(4326)
@@ -382,7 +388,7 @@ leaflet() %>%
 ```{r, warning=F, message=F,echo=F}
 completo <- data.frame(MUN = 'TOTAL', n = sum(dengue_$n, na.rm = T), poblacion = sum(poblaciones$poblacion, na.rm = T), IA = round(sum(dengue_$n, na.rm = T)/sum(poblaciones$poblacion, na.rm = T)*100000,1))
 
-dengue_ <- rbind(dengue_, completo)
+dengue_ <- rbind(dengue_ %>% select(-CLAVE), completo)
 
 ```
 
