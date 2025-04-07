@@ -1,7 +1,7 @@
  ## Epidemiología 
 
 <p>
-La Epidemiología es el estudio de la distribución y determinantes de los estados de salud en poblaciones específicas y la aplicación de este estudio a la prevención y control de problemas sanitarios. Incluye actividades de vigilancia epidemiologíca, observaciones, prueba de hipótesis, investigaciones analíticas y experimentos. Trata de identificar _cuándo_, _dónde_ y _qué tipo de personas_ son afectadas en términos de salud, a través del estudio de factores de tipo físico, químico, biológico, social, cultural, economómico, genético o conductual. Lo anterior a fin de responder por qué se enferma o muere una población, especialmente aquella que se encuentra en condiciones vulnerables.
+La Epidemiología es el estudio de la distribución y determinantes de los estados de salud en poblaciones específicas y la aplicación de este estudio a la prevención y control de problemas sanitarios. Incluye actividades de vigilancia epidemiologíca, observaciones, prueba de hipótesis, investigaciones analíticas y experimentos. Trata de identificar <i>cuándo</i>, <i>dónde</i> y <i>qué tipo de personas</i> son afectadas en términos de salud, a través del estudio de factores de tipo físico, químico, biológico, social, cultural, economómico, genético o conductual. Lo anterior a fin de responder por qué se enferma o muere una población, especialmente aquella que se encuentra en condiciones vulnerables.
 
 El conocimiento obtenido mediante la Epidemiología sirve como instrumento para la salud pública, entendiéndose esta última como las acciones colectivas de promoción, prevención y control, dirigidas a mejorar o restaurar la salud de la población. 
 
