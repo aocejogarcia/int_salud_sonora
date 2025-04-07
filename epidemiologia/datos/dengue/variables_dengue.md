@@ -1,6 +1,6 @@
 ## Información de las variables que conforman la base de datos del componente de Enfermedades Transmitidas por vector
-| Nombre | Codificación | Valores | Descripción |
-| :------- | :-------- | :-------- | :-------- | 
+| Codificación | Valores | Descripción |
+| :------- | :-------- | :-------- | 
 |CERTIFICADO_DEFUNCION|PERMITE SU CAPTURA (SIEMPRE Y CUANDO TENGA EN LA VARIABLE DE DEFUNCION SI) EN EL ESPACIO CORRESPONDIENTE |FOLIO DEL CERTIFICADO DE DEFUNCION |
 |CVE_DEFUNCION|PERMITE SU SELECCIÓN EN EL CATALOGO (1=SI, 2=NO)|INDICA DEFUNCION|
 |DES_DIAG_FINAL|ES GENERADO POR EL SISTEMA SEGÚN EL DIAGNÓSTICO PROBABLE Y RESULTADO DE LABORATORIO |DIAGNÓSTICO FINAL DEL CASO|
