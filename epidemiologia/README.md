@@ -5,3 +5,9 @@ La Epidemiología es el estudio de la distribución y determinantes de los estad
 El conocimiento obtenido mediante la Epidemiología sirve como instrumento para la salud pública, entendiéndose esta última como las acciones colectivas de promoción, prevención y control, dirigidas a mejorar o restaurar la salud de la población. 
 
 El área de Epidemiolgía de la Secretaría de Salud Pública tiene como objetivo general coordinar, supervisar, dirigir y evaluar las actividades de los sistemas especiales de vigilancia epidemiológica, mediante la recolección sistemática, continua, oportuna y confiable de información relevante y necesaria sobre las condiciones de salud de la población y sus determinantes, así su posterior análisis e interpretación para la toma de decisiones y difusión.
+
+
+| Archivo | Descripción |
+|:--------| :-----------|
+| base_municipios_sonora | Reconstrucción y proyecciones de la población de los municipios de México 1990-2040, publicadas en el Consejo Estatal de Población (COESPO). Información divididad por año y edad quinquenal. |
+| 00_Pob_Mitad_1950_2070 | Estimación de la población de México de 1950 a 2070, publicada por el Consejo Nacional de Población (CONAPO). |
