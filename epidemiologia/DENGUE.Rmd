@@ -41,7 +41,7 @@ dengue_actual <- read_delim(actual, delim = '|', locale = locale(encoding = 'lat
   )) %>%
   filter(DES_EDO_REP == 'SONORA', year(floor_date(FEC_INI_SIGNOS_SINT, 'week') + 3) == year(Sys.Date())) %>% 
   filter(!IDE_ID %in% c(1120350, 1425639)) %>%
-  mutate(semana = paste(year(floor_date(FEC_INI_SIGNOS_SINT, "week") + 3), "-", str_pad(floor_date(FEC_INI_SIGNOS_SINT, "week"), pad = "0", width = 2, side = "left"), sep = ""),
+  mutate(semana = paste(year(floor_date(FEC_INI_SIGNOS_SINT, "week") + 3), "-", str_pad(epiweek(floor_date(FEC_INI_SIGNOS_SINT, "week")), pad = "0", width = 2, side = "left"), sep = ""),
          CVE_DEFUNCION = case_when(
            IDE_ID %in% c(1011171) ~ 9, 
            T ~ CVE_DEFUNCION
@@ -150,7 +150,7 @@ bol <- bol %>%
   arrange(desc(TOTAL)) %>% 
   mutate(ESTADO = fct_inorder(ESTADO, ordered = T))
 
-openxlsx::write.xlsx(bol, 'datos/dengue/dengue nacional.xlsx', overwrite = T)
+#openxlsx::write.xlsx(bol, 'dengue nacional.xlsx', overwrite = T)
 
 nacional <- read_csv('00_Pob_Mitad_1950_2070.csv', locale = locale(encoding = 'UTF-8'), comment = '', quote = '') %>% 
   filter(AÑO == as.numeric(format(Sys.Date(), '%Y')),
@@ -160,37 +160,7 @@ nacional <- read_csv('00_Pob_Mitad_1950_2070.csv', locale = locale(encoding = 'U
 IAnac <- round(sum(bol$TOTAL, na.rm = T)/sum(nacional$poblacion, na.rm = T)*100000,1)
 CAnac <- sum(bol$TOTAL, na.rm = T)
 
-dengue_actual %>%
-  filter(year(floor_date(FEC_INI_SIGNOS_SINT, 'week') + 3) == year(Sys.Date())) %>%
-  group_by(Semana = epiweek(FEC_INI_SIGNOS_SINT)) %>%
-  count(DES_MPO_RES, ESTATUS_CASO) %>%
-  pivot_wider(names_from = ESTATUS_CASO, values_from = n, values_fill = 0) %>%
-  left_join(tibble(Semana = NA, `1` = NA, `2` = NA, `3` = NA)) %>% 
-  filter(!is.na(Semana)) %>% 
-  rename(Probables = `1`, Confirmados = `2`, Descartados = `3`, Municipio = DES_MPO_RES) %>%
-  mutate(Municipio = stringr::str_to_title(Municipio)) %>%
-  ungroup() %>%
-  dplyr::select(-Confirmados, -Descartados) %>%
-  pivot_wider(values_from = Probables, names_from = Semana, values_fill = 0) %>%
-  openxlsx::write.xlsx('datos/dengue/Estudiados por municipio2.xlsx', overwrite = T)
 
-
-dengue_actual %>%
-  count(semana, ESTATUS_CASO) %>%
-  pivot_wider(names_from = ESTATUS_CASO, values_from = n) %>%
-  rename(Probables = `1`, Confirmados = `2`, Descartados = `3`) %>%
-  arrange(semana) %>%
-  replace(is.na(.), 0) %>% 
-  mutate(Positividad = Confirmados/(Confirmados + Descartados)) %>%
-  mutate(Estimados = round(Confirmados + (Probables*Positividad), 0)) %>% 
-  openxlsx::write.xlsx('datos/dengue/Positividad - estimados dengue.xlsx', overwrite = T)
-
-dengue_actual %>% 
-  filter(ESTATUS_CASO %in% c(1,2), year(floor_date(FEC_CAPTURA, 'week') + 3) == year(Sys.Date())) %>% 
-  count(semana = epiweek(FEC_CAPTURA)) %>% 
-  right_join(tibble(semana = seq(1,52))) %>%
-  arrange(semana) %>% 
-  openxlsx::write.xlsx('datos/dengue/probables y confirmados.xlsx', overwrite = T)
 
 ```
 
@@ -202,7 +172,7 @@ plot_ly(bol, x = ~ESTADO) %>%
   add_bars(y = ~TOTAL, name = 'Casos', yaxis = 'y') %>% 
   layout(title = '', legend = list(x = 1.1, y = 0.9, orientation = "v"),
          yaxis2 = list(title = "Incidencia por 100 000 habs", side = "right", showgrid = F, ticks="outside",
-                       zerolinecolor = '#000000', overlaying = "y", range = c(0, 1.2 * max(nacional$IA, na.rm = T))),
+                       zerolinecolor = '#000000', overlaying = "y", range = c(0, 1.2 * max(bol$IA, na.rm = T))),
          xaxis = list(title = 'Entidad Federativa',
                       showgrid = F,
                       ticks="outside",
@@ -218,6 +188,16 @@ plot_ly(bol, x = ~ESTADO) %>%
   add_annotations(x = 0.9, y = 0.9, xref = "paper", yref = "paper", text = paste("Casos acumulados ", CAnac, "<br> a nivel nacional", sep = ""), showarrow = F)
 
 ```
+```{r, echo=F, warning=F, message=F}
+bol %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c( -1), 
+                                                 c( 'All')))) 
+
+```
+
 
 ## Informe de Dengue
 
@@ -231,9 +211,8 @@ DEF <- dengue_actual %>%
   filter(ESTATUS_CASO == 2, CVE_DEFUNCION == 1)
 ESTUDIADOS <- dengue_actual %>%
   filter(!IDE_ID %in% dengue_anterior$IDE_ID)
-ESTUDIADOS %>% 
-  count(DES_MPO_REP, FECHA_TOMA_MUESTRA, ESTATUS_CASO) %>% 
-  write.csv('datos/dengue/Estudiados_dengue.csv', fileEncoding = 'latin1')
+
+  #write.csv('Estudiados_dengue.csv', fileEncoding = 'latin1')
 
 semana <- tibble(`Casos confirmados` = nrow(CC),
                  `Defunciones` = nrow(DEF)
@@ -331,6 +310,24 @@ signos <- dengue_actual %>%
 ### Casos de Dengue por severidad, Sonora, `r as.numeric(format(Sys.Date(), '%Y'))`  
 `r flextable(signos)`
 
+
+### Casos estudiados por municipio y toma de muestra
+```{r, echo=FALSE, message=F, warning=F}
+ESTUDIADOS %>% 
+  count(DES_MPO_REP, FECHA_TOMA_MUESTRA, ESTATUS_CASO) %>%
+  rename(Municipio = DES_MPO_REP, ESTATUS = ESTATUS_CASO, 'No. de casos' = n) %>% 
+  mutate(ESTATUS = case_when(
+    ESTATUS == 1 ~ 'Probable',
+    ESTATUS == 2 ~ 'Confirmado',
+    ESTATUS == 3 ~ 'Descartado'
+  ), Municipio = str_to_title(Municipio)) %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c( -1), 
+                                                 c( 'All')))) 
+```
+
 ## MAPA  
 
 
@@ -395,6 +392,75 @@ dengue_ <- rbind(dengue_ %>% select(-CLAVE), completo)
 
 ### TABLA ----
 `r flextable(dengue_)`
+
+
+### Probables por municipio   
+
+```{r, warning=F, message=F,echo=F}
+dengue_actual %>%
+  filter(year(floor_date(FEC_INI_SIGNOS_SINT, 'week') + 3) == year(Sys.Date())) %>%
+  group_by(Semana = epiweek(FEC_INI_SIGNOS_SINT)) %>%
+  count(DES_MPO_RES, ESTATUS_CASO) %>%
+  pivot_wider(names_from = ESTATUS_CASO, values_from = n, values_fill = 0) %>%
+  left_join(tibble(Semana = NA, `1` = NA, `2` = NA, `3` = NA)) %>% 
+  filter(!is.na(Semana)) %>% 
+  rename(Probables = `1`, Confirmados = `2`, Descartados = `3`, Municipio = DES_MPO_RES) %>%
+  mutate(Municipio = stringr::str_to_title(Municipio)) %>%
+  ungroup() %>%
+  dplyr::select(-Confirmados, -Descartados) %>%
+  pivot_wider(values_from = Probables, names_from = Semana, values_fill = 0) %>%
+  janitor::adorn_totals(where = 'col') %>% 
+  arrange(desc(Total)) %>% 
+  filter(Total >0) %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c( -1), 
+                                                 c( 'All')))) 
+
+#  openxlsx::write.xlsx('Estudiados por municipio2.xlsx', overwrite = T)
+```
+
+
+### Positividad y estimados    
+
+```{r, warning=F, message=F,echo=F}
+
+dengue_actual %>%
+  count(semana, ESTATUS_CASO) %>%
+  pivot_wider(names_from = ESTATUS_CASO, values_from = n) %>%
+  rename(Probables = `1`, Confirmados = `2`, Descartados = `3`) %>%
+  arrange(semana) %>%
+  replace(is.na(.), 0) %>% 
+  mutate(Positividad = Confirmados/(Confirmados + Descartados)) %>%
+  mutate(Estimados = round(Confirmados + (Probables*Positividad), 0))  %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c( -1), 
+                                                 c( 'All')))) 
+
+#  openxlsx::write.xlsx('Positividad - estimados dengue.xlsx', overwrite = T)
+```
+
+
+### Probables y confirmados    
+```{r, warning=F, message=F,echo=F}
+dengue_actual %>% 
+  filter(ESTATUS_CASO %in% c(1,2), year(floor_date(FEC_CAPTURA, 'week') + 3) == year(Sys.Date())) %>% 
+  count(semana = epiweek(FEC_CAPTURA)) %>% 
+  right_join(tibble(semana = seq(1,52))) %>%
+  arrange(semana)  %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blsfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c(-1), 
+                                                 c( 'All')))) 
+ 
+#  openxlsx::write.xlsx('probables y confirmados.xlsx', overwrite = T)
+
+```
+
 
 ## Indicadores
 #### Acumulado
