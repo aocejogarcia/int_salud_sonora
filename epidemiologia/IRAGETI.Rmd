@@ -1,0 +1,2133 @@
+---
+title: "ENFERMEDADES RESPIRATORIAS VIRALES"
+author: "Abraham Ocejo"
+date: '`r Sys.Date()`'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(stringi)
+library(leaflet)
+library(leaflet.extras)
+library(sf)
+library(janitor)
+library(flextable)
+library(plotly)
+library(stringi)
+library(stringr)
+
+
+#if (Sys.Date() == floor_date(Sys.Date(), 'week') + 1) {
+#  actual <- paste('datos/SISVER/epi_', format(floor_date(Sys.Date(), 'week') + 1, '%d%m%y'), '.txt', sep = '')
+#} else {
+#  actual <- paste('datos/SISVER/epi_', format(Sys.Date(), '%d%m%y'), '.txt', sep = '')
+#}
+
+sisver <- bind_rows(
+  read_delim('datos/SISVER/epi_hist.txt', delim = '|', locale = locale(encoding = 'latin1'), comment = '', quote = '') %>% mutate(CERTIDEF = as.character(CERTIDEF)),
+  read_delim('datos/SISVER/epi_2023.txt', delim = '|', locale = locale(encoding = 'latin1'), comment = '', quote = '') %>% mutate(CERTIDEF = as.character(CERTIDEF)),
+#  read_delim(actual, delim = '|', locale = locale(encoding = 'latin1'), comment = '', quote = '') %>%
+  read_delim('datos/SISVER/epi_070425.txt', delim = '|', locale = locale(encoding = 'latin1'), comment = '', quote = '') %>% 
+    mutate(CERTIDEF = as.character(CERTIDEF))
+) %>%
+  mutate(
+    FECHREG = as.Date.character(FECHREG, '%d/%m/%Y'),
+    FECDEF = as.Date.character(FECDEF, '%d/%m/%Y'),
+    FECNACI = as.Date.character(FECNACI, '%d/%m/%Y'),
+    FECINGRE = as.Date.character(FECINGRE, '%d/%m/%Y'),
+    FECINISI = as.Date.character(FECINISI, '%d/%m/%Y'),
+    FECINITXANTIVI = as.Date.character(FECINITXANTIVI, '%d/%m/%Y'),
+    FECVAEST = as.Date.character(FECVAEST, '%d/%m/%Y'),
+    FECMUEANT = as.Date.character(FECMUEANT, '%d/%m/%Y'),
+    FEC_VAC_COV = as.Date.character(FEC_VAC_COV, '%d/%m/%Y'),
+    FEC_REF_VAC_COV = as.Date.character(FEC_REF_VAC_COV, '%d/%m/%Y'),
+    CLASFLU = case_when(
+      RESDEFIN %in% c('A H1', 'A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO') ~ 'CONF LAB',
+      RESDEFIN2 %in% c('INF AH1N1 PMD') ~ 'CONF LAB',
+      RESDEFIN == 'NEGATIVO' ~ 'NEGATIVO',
+      T ~ CLASFLU
+    ),
+    CLASVSR = case_when(
+      RESDEFIN == 'VSR' ~ 'CONF LAB',
+      RESDEFIN2 == 'VSR' ~ 'CONF LAB',
+      RESDEFIN == 'NEGATIVO' ~ 'NEGATIVO',
+      T ~ CLASVSR
+    )
+  ) %>% 
+  mutate(temporada = case_when(
+    epiweek(FECINISI) %in% seq(40, 53) ~ paste(year(floor_date(FECINISI, 'week') + 3), '-', year(floor_date(FECINISI, 'week') + 3) + 1, sep = ''),
+    epiweek(FECINISI) %in% seq(1, 20)  ~ paste(year(floor_date(FECINISI, 'week') + 3) - 1, '-', year(floor_date(FECINISI, 'week') + 3), sep = ''),
+    epiweek(FECINISI) %in% seq(21, 39) ~ paste('Interestacional ', year(floor_date(FECINISI, 'week') + 3), sep = '')),
+    temporadad = case_when(
+      epiweek(FECDEF) %in% seq(40, 53) ~ paste(year(floor_date(FECDEF, 'week') + 3), '-', year(floor_date(FECDEF, 'week') + 3) + 1, sep = ''),
+      epiweek(FECDEF) %in% seq(1, 20)  ~ paste(year(floor_date(FECDEF, 'week') + 3) - 1, '-', year(floor_date(FECDEF, 'week') + 3), sep = ''),
+      epiweek(FECDEF) %in% seq(21, 39) ~ paste('Interestacional ', year(floor_date(FECDEF, 'week') + 3), sep = '')),
+    #temporadai = case_when(
+      #epiweek(FECINGRE) %in% seq(40, 53) ~ paste(year(floor_date(FECINGRE, 'week') + 3), '-', year(floor_date(FECINGRE, 'week') + 3) + 1, sep = ''),
+      #epiweek(FECINGRE) %in% seq(1, 20)  ~ paste(year(floor_date(FECINGRE, 'week') + 3) - 1, '-', year(floor_date(FECINGRE, 'week') + 3), sep = ''),
+      #epiweek(FECINGRE) %in% seq(21, 39) ~ paste('Interestacional ', year(floor_date(FECINGRE, 'week') + 3), sep = '')),
+    temporadar = case_when(
+      epiweek(FECHREG) %in% seq(40, 53) ~ paste(year(floor_date(FECHREG, 'week') + 3), '-', year(floor_date(FECHREG, 'week') + 3) + 1, sep = ''),
+      epiweek(FECHREG) %in% seq(1, 20)  ~ paste(year(floor_date(FECHREG, 'week') + 3) - 1, '-', year(floor_date(FECHREG, 'week') + 3), sep = ''),
+      epiweek(FECHREG) %in% seq(21, 39) ~ paste('Interestacional ', year(floor_date(FECHREG, 'week') + 3), sep = '')),
+    season = case_when(
+    epiweek(FECINISI) %in% seq(40, 53) ~ paste('estacional'),
+    epiweek(FECINISI) %in% seq(1, 20)  ~ paste('estacional'),
+    epiweek(FECINISI) %in% seq(21, 39) ~ paste('interestacional')),
+    week = factor(epiweek(FECINISI), levels = c(seq(40,53), seq(1,20), seq(21,39))),
+    weekd = factor(epiweek(FECDEF), levels = c(seq(40,53), seq(1,20), seq(21,39))),
+    #week = epiweek(floor_date(dmy(FECINISI), 'week')),
+    #weekd = epiweek(floor_date(dmy(FECDEF), 'week')),
+    year = year(floor_date(FECINISI, 'week') + 3),
+    yeard = year(floor_date(FECDEF, 'week') + 3)
+  ) %>%
+  mutate(semana = paste(year, '-', str_pad(week, width = 2, side = 'left', pad = '0'), sep = ''),
+         semanad = paste(yeard, '-', str_pad(weekd, width = 2, side = 'left', pad = '0'), sep = '')) %>% 
+  filter(ENTRESI == 'SONORA')
+
+###Revisar qué año aparece en objeto actual
+if (epiweek(Sys.Date()) %in% seq(41,53)) {
+  actual <- paste(year(floor_date(Sys.Date(), 'week') + 3)-1, '-', year(floor_date(Sys.Date(), 'week') + 3), sep = '')
+  estacional <- sisver %>%
+    filter(temporada %in% paste(year(floor_date(Sys.Date(), 'week') + 3), '-', year(floor_date(Sys.Date(), 'week') + 3) + 1, sep = '') | # Temporada actual casos
+             temporada %in% paste(year(floor_date(Sys.Date(), 'week') + 3) - 1, '-', year(floor_date(Sys.Date(), 'week') + 3), sep = '') | # Temporada anterior casos (2023)
+             temporada %in% paste(year(floor_date(Sys.Date(), 'week') + 3) -2, '-', year(floor_date(Sys.Date(), 'week') + 3) - 1, sep = '') | # Temporada anterior casos (2022)
+             temporadad %in% paste(year(floor_date(Sys.Date(), 'week') + 3), '-', year(floor_date(Sys.Date(), 'week') + 3) + 1, sep = '') | # Temporada actual defunciones
+             temporadad %in% paste(year(floor_date(Sys.Date(), 'week') + 3) - 1, '-', year(floor_date(Sys.Date(), 'week') + 3), sep = '') | # Temporada anterior defunciones (2023)
+             temporadad %in% paste(year(floor_date(Sys.Date(), 'week') + 3) -2, '-', year(floor_date(Sys.Date(), 'week') + 3) - 1, sep = '') | # Temporada anterior defunciones (2022)
+             temporadar %in% paste(year(floor_date(Sys.Date(), 'week') + 3), '-', year(floor_date(Sys.Date(), 'week') + 3) + 1, sep = '') | # Temporada actual registro
+             temporadar %in% paste(year(floor_date(Sys.Date(), 'week') + 3) - 1, '-', year(floor_date(Sys.Date(), 'week') + 3), sep = '') |  # Temporada anterior registro (2023)
+             temporadar %in% paste(year(floor_date(Sys.Date(), 'week') + 3) -2, '-', year(floor_date(Sys.Date(), 'week') + 3) - 1, sep = '') # Temporada anterior registro (2022)
+             )
+  semana <- tibble(semana = factor(x = c(seq(40,53), seq(1,20)), levels = c(seq(40,53), seq(1,20))))
+  
+} else if (epiweek(Sys.Date()) %in% seq(1,21)) {
+ actual <- paste(year(floor_date(Sys.Date(), 'week') + 3)-1, '-', year(floor_date(Sys.Date(), 'week') + 3), sep = '')
+   estacional <- sisver %>%
+    filter(temporada %in% paste(year(floor_date(Sys.Date(), 'week') + 3) - 1, '-', year(floor_date(Sys.Date(), 'week') + 3), sep = '') | # Temporada actual casos
+             temporada %in% paste(year(floor_date(Sys.Date(), 'week') + 3) - 2, '-', year(floor_date(Sys.Date(), 'week') + 3) - 1, sep = '') | # Temporada anterior casos
+             temporada %in% paste(year(floor_date(Sys.Date(), 'week') + 3) - 3, '-', year(floor_date(Sys.Date(), 'week') + 3) - 2, sep = '') | # Temporada previa a la anterior
+             temporadad %in% paste(year(floor_date(Sys.Date(), 'week') + 3) - 1, '-', year(floor_date(Sys.Date(), 'week') + 3), sep = '') | # Temporada actual defunciones
+             temporadad %in% paste(year(floor_date(Sys.Date(), 'week') + 3) - 2, '-', year(floor_date(Sys.Date(), 'week') + 3) - 1, sep = '') | # Temporada anterior defunciones 
+             temporadad %in% paste(year(floor_date(Sys.Date(), 'week') + 3) - 3, '-', year(floor_date(Sys.Date(), 'week') + 3) - 2, sep = '') | # Temporada previa a la anterior
+             temporadar %in% paste(year(floor_date(Sys.Date(), 'week') + 3) - 1, '-', year(floor_date(Sys.Date(), 'week') + 3), sep = '') | # Temporada actual registro
+             temporadar %in% paste(year(floor_date(Sys.Date(), 'week') + 3) - 2, '-', year(floor_date(Sys.Date(), 'week') + 3) - 1, sep = '') |  # Temporada anterior registro
+             temporadar %in% paste(year(floor_date(Sys.Date(), 'week') + 3) - 3, '-', year(floor_date(Sys.Date(), 'week') + 3) - 2, sep = '')  # Temporada previa a la anterior
+             )
+  semana <- tibble(semana = factor(x = c(seq(40,53), seq(1,20)), levels = c(seq(40,53), seq(1,20))))
+  
+} else {
+  actual <- paste('Interestacional ', year(floor_date(Sys.Date(), 'week') + 3), sep = '')
+  estacional <- sisver %>%
+    filter(temporada %in% paste('Interestacional ', year(floor_date(Sys.Date(), 'week') + 3), sep = '') | # Temporada actual casos
+             temporada %in% paste('Interestacional ', year(floor_date(Sys.Date(), 'week') + 3) - 1, sep = '') | # Temporada anterior casos
+             temporada %in% paste('Interestacional ', year(floor_date(Sys.Date(), 'week') + 3) - 2, sep = '') | #Temporada previa a la anterior
+           temporadad %in% paste('Interestacional ', year(floor_date(Sys.Date(), 'week') + 3), sep = '') | # Temporada actual defunciones
+             temporadad %in% paste('Interestacional ', year(floor_date(Sys.Date(), 'week') + 3) - 1, sep = '') | # Temporada anterior defunciones
+             temporadad %in% paste('Interestacional ', year(floor_date(Sys.Date(), 'week') + 3) - 2, sep = '') | #Temporada previa a la anterior
+           temporadar %in% paste('Interestacional ', year(floor_date(Sys.Date(), 'week') + 3), sep = '') | # Temporada actual registro
+             temporadar %in% paste('Interestacional ', year(floor_date(Sys.Date(), 'week') + 3) - 1, sep = '') | # Temporada anterior registro
+             temporadar %in% paste('Interestacional ', year(floor_date(Sys.Date(), 'week') + 3) - 2, sep = '')  #Temporada previa a la anterior
+    )
+  
+  semana <- tibble(semana = factor(x = seq(21,39), levels = seq(21,39)))
+}
+
+#sisver2 <- dsb_son(sisver)
+
+estacional <- estacional %>%
+  filter(ENTIDAD == 'SONORA')
+  
+  #filter(CLUES %in% c('SRSSA001110',
+                                       #    'SRSSA001105',
+                                        #   'SRIMS000396', 
+                                         #  'SRIMS000900',
+                                          # 'SRIST000133', 
+                                           #'SRSME000011',
+                                           #'SRSSA000504',
+                                           #'SRSSA017671',
+                                           #'SRSSA001851',
+                                           #'SRIMS000920',
+                                           #'SRSSA000562',
+                                           #'SRIMS000145',
+                                           #'SRSSA001011',
+                                           #'SRSSA000830',
+                                           #'SRSSA001670',
+                                           #'SRSSA017666')) 
+ 
+                                           
+
+ #POBLACIONES PARA INCIDENCIA ----
+poblaciones <- openxlsx::read.xlsx('base_municipios_sonora.xlsx') %>%
+  filter(AÑO == year(Sys.Date())) %>% 
+  group_by(MUN) %>%
+  summarise(poblacion = sum(POB, na.rm = T)) %>%
+  mutate(MUN = stri_trans_general(str = str_to_upper(MUN, locale = 'en'), id = "Latin-ASCII")) 
+
+```
+
+## Casos de ERV/IRAG   
+`r estacional %>% filter(temporada == actual) %>%  bind_rows(estacional %>% filter(!is.na(RESDEFIN2), temporada == actual) %>% mutate(RESDEFIN = RESDEFIN2)) %>% count()` 
+
+## COVID-19
+
+#-	Casos, hospitalizados y defunciones `r year(Sys.Date())-1`-`r year(Sys.Date())`
+
+```{r, echo=FALSE, message=F, warning=F}
+#Casos, hospitalizados y defunciones 2024
+estacional %>% 
+  filter(temporada == actual, CLASCOVID19 == 'CONF LAB') %>% 
+  count(semana = week, TIPACIEN) %>% 
+  pivot_wider(names_from = TIPACIEN, values_from = n, values_fill = 0) %>% 
+  full_join(
+    estacional %>% 
+      filter(temporadad == actual,
+             CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% 
+  count(semana = week) %>% 
+  rename(DEFUNCION = n)
+  ) %>% replace(is.na(.), 0) %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c(10, 25, 50, -1), 
+                                                 c(10, 25, 50, 'All'))))
+```
+
+#-	Comparativo casos y defunciones en temporada estacional `r  year(Sys.Date()) - 2` - `r  year(Sys.Date()) - 1` vs `r  year(Sys.Date()) -1` - `r  year(Sys.Date())`   
+
+```{r, echo=FALSE, message=F, warning=F}
+#Comparativo casos y defunciones en temporada inter-estacional 2023-2024
+estacional %>% 
+  filter(temporada == '2023-2024', CLASCOVID19 == 'CONF LAB') %>% 
+  count(semana = week) %>% 
+  replace(is.na(.), 0) %>% 
+  rename('Temporada anterior' = n) %>% 
+  full_join(
+    estacional %>% 
+      filter(temporada == '2024-2025', CLASCOVID19 == 'CONF LAB') %>%
+      count(semana = week) %>% 
+      rename('Temporada actual' = n)
+  ) %>% 
+  full_join(
+    estacional %>% 
+      filter(temporadad == '2023-2024',
+             CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% 
+      count(semana = weekd) %>% 
+      rename('Defunciones anterior' = n)
+  ) %>% 
+  full_join(
+    estacional %>%
+      filter(temporada == '2024-2025',
+             CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% 
+      count(semana = weekd) %>% 
+      rename('Defunciones actual' = n)
+  ) %>% 
+  right_join(semana) %>%
+  #mutate(semana = factor(semana, levels = c(seq(40,52), seq(1,20)))) %>% 
+  arrange(semana) %>% 
+  replace(is.na(.), 0) %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c(10, 25, 50, -1), 
+                                                 c(10, 25, 50, 'All'))))
+```
+
+#-	Casos confirmados por semana de notificación de COVID-19 en temporada estacional `r year(Sys.Date())-1`-`r year(Sys.Date())`  
+
+```{r, echo=FALSE, message=F, warning=F}
+#Casos confirmados por semana de notificación de COVID-19 en temporada inter-estacional 2024
+estacional %>% 
+  filter(temporadar == actual & year(FECINGRE) == year(Sys.Date()) | (temporadar == actual & year(FECINGRE) == year(Sys.Date()) + 1),
+         CLASCOVID19 == 'CONF LAB') %>% 
+  count(semana = epiweek((FECHREG))) %>% 
+  replace(is.na(.), 0) %>%
+  rename(Casos = n) %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c(10, 25, 50, -1), 
+                                                 c(10, 25, 50, 'All'))))
+```
+
+#-	Casos acumulados de COVID-19 por municipio temporada estacional `r year(Sys.Date())-1`-`r year(Sys.Date())`
+
+```{r, echo=FALSE, message=F, warning=F}
+#Casos acumulados de COVID-19 por município em temporada inter-estacional 2024
+estacional %>% 
+  filter(temporada == actual,
+         CLASCOVID19 == 'CONF LAB') %>% 
+  count(MPIORESI) %>%
+  rename(MUNICIPIO = MPIORESI, Casos = n) %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c(10, 25, 50, -1), 
+                                                 c(10, 25, 50, 'All'))))
+```
+
+#-	Casos por sexo y grupo de edad en Sonora temporada estacional `r year(Sys.Date())-1`-`r year(Sys.Date())`   
+
+```{r, echo=FALSE, message=F, warning=F}
+#Casos por sexo y grupo de edad en Sonora temporada inter-estacional 2024
+estacional %>%
+  filter(temporada == actual,
+         CLASCOVID19 == 'CONF LAB') %>% 
+  mutate(GPO_EDAD = cut(EDAD, 
+                        breaks = c(0,5,14,24,44,59,Inf),
+                        labels = c('0 - 5', '6 - 14', '15 - 24', '25 - 44','45 - 59', '60 y más'),
+                        include.lowest = T)) %>%
+  mutate(GPO_EDAD = fct(as.character(GPO_EDAD), levels = c('0 - 5', '6 - 14', '15 - 24', '25 - 44','45 - 59', '60 y más'))) %>% 
+  count(GPO_EDAD, SEXO) %>% 
+  pivot_wider(values_from = n, names_from = SEXO, values_fill = 0) %>%
+  full_join(tibble(GPO_EDAD = factor(NA, levels = c('0 - 5', '6 - 14', '15 - 24', '25 - 44','45 - 59', '60 y más')), FEMENINO = 0, MASCULINO = 0)) %>% 
+  rename(Mujer = FEMENINO, Hombre = MASCULINO) %>% 
+  full_join(
+    tibble(GPO_EDAD = factor(c('0 - 5', '6 - 14', '15 - 24', '25 - 44','45 - 59', '60 y más')))) %>%
+  filter(!is.na(GPO_EDAD)) %>% 
+  replace(is.na(.), 0) %>%
+  arrange(GPO_EDAD) %>% select(GPO_EDAD, Mujer, Hombre) %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c(10, 25, 50, -1), 
+                                                 c(10, 25, 50, 'All'))))
+
+```
+
+
+## Influenza   
+
+#-	Casos, hospitalizados y defunciones temporada estacional `r year(Sys.Date())-1`-`r year(Sys.Date())`
+
+```{r, echo=FALSE, message=F, warning=F}
+#Casos, hospitalizados y defunciones temporada inter-estacional 2024
+estacional %>% 
+  filter(temporada == actual,
+         CLASFLU == 'CONF LAB' & RESDEFIN %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO')) %>% 
+  bind_rows(
+    estacional %>% 
+  filter(temporada == actual,
+         CLASFLU == 'CONF LAB' & RESDEFIN2 %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO'))
+  ) %>% 
+  count(semana = week, TIPACIEN) %>% 
+  pivot_wider(names_from = TIPACIEN, values_from = n, values_fill = 0) %>% 
+  full_join(
+  estacional %>% 
+    filter(temporadad == actual, EVOLUCI == 'DEFUNCION', CLASFLU == 'CONF LAB'  & RESDEFIN %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO')) %>%
+    bind_rows(
+      estacional %>% filter(temporadad == actual, EVOLUCI == 'DEFUNCION', CLASFLU == 'CONF LAB'  & RESDEFIN2 %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO'))) %>%     
+  count(semana = weekd) %>% 
+  rename(DEFUNCION = n)
+  ) %>% replace(is.na(.), 0) %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c(10, 25, 50, -1), 
+                                                 c(10, 25, 50, 'All'))))
+
+
+```
+
+#-	Comparativo casos y defunciones en temporada estacional `r year(Sys.Date()) - 2` - `r year(Sys.Date())-1` vs `r year(Sys.Date())-1` - `r year(Sys.Date())`
+
+```{r, echo=FALSE, message=F, warning=F}
+#Comparativo casos y defunciones en temporada inter-estacional 2023 -2024
+estacional %>% 
+  filter(temporada == '2023-2024',
+         CLASFLU == 'CONF LAB' & RESDEFIN %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO')) %>% 
+  bind_rows(
+ estacional %>% 
+  filter(temporada == '2023-2024',
+         CLASFLU == 'CONF LAB' & RESDEFIN2 %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO'))   
+  ) %>% 
+  count(semana = week) %>% 
+  rename('Temporada 2023' = n) %>% 
+  full_join(
+    estacional %>% 
+      filter(temporada == '2024-2025',
+             CLASFLU == 'CONF LAB' & RESDEFIN %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO')) %>%
+      bind_rows(
+     estacional %>% 
+      filter(temporada == '2024-2025',
+             CLASFLU == 'CONF LAB' & RESDEFIN2 %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO'))   
+      ) %>% 
+      count(semana = week) %>% 
+      rename('Temporada 2024' = n)
+  ) %>% 
+  full_join(
+   estacional %>% 
+      filter(temporadad == '2023-2024', EVOLUCI == 'DEFUNCION',
+             CLASFLU == 'CONF LAB' & RESDEFIN %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO')) %>%
+     bind_rows(
+  estacional %>% 
+      filter(temporadad == '2023-2024', EVOLUCI == 'DEFUNCION',
+             CLASFLU == 'CONF LAB' & RESDEFIN2 %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO'))  
+     ) %>% 
+      count(semana = weekd) %>% 
+      rename('Defunciones 2023' = n)
+  ) %>% 
+  full_join(
+    estacional %>%
+      filter(temporadad == '2024-2025', EVOLUCI == 'DEFUNCION',
+             CLASFLU == 'CONF LAB' & RESDEFIN %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO')) %>%
+      bind_rows(
+     estacional %>%
+      filter(temporadad == '2024-2025', EVOLUCI == 'DEFUNCION',
+             CLASFLU == 'CONF LAB' & RESDEFIN2 %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO'))   
+      ) %>% 
+      count(semana = weekd) %>% 
+      rename('Defunciones 2024' = n)
+  ) %>% 
+  right_join(semana) %>%
+  #mutate(semana = factor(semana, levels = c(seq(40,52), seq(1,20)))) %>% 
+  arrange(semana) %>% 
+replace(is.na(.), 0) %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c(10, 25, 50, -1), 
+                                                 c(10, 25, 50, 'All'))))
+```
+
+#-	Casos acumulados de Influenza por municipio en temporada estacional `r year(Sys.Date())-1`-`r year(Sys.Date())`
+
+```{r, echo=FALSE, message=F, warning=F}
+#Casos acumulados de Influenza por municipio en temporada inter-estacional 2024
+estacional %>% 
+  filter(temporada == actual,
+         CLASFLU == 'CONF LAB' & RESDEFIN %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO')) %>% 
+  bind_rows(
+   estacional %>% 
+  filter(temporada == actual,
+         CLASFLU == 'CONF LAB' & RESDEFIN2 %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO')) 
+  ) %>% 
+  count(MPIORESI) %>%
+  rename(MUNICIPIO = MPIORESI, Casos = n) %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c(10, 25, 50, -1), 
+                                                 c(10, 25, 50, 'All'))))
+```
+
+#-	Casos por sexo y grupo de edad en Sonora temporada estacional `r year(Sys.Date())-1`-`r year(Sys.Date())`
+
+```{r, echo=FALSE, message=F, warning=F}
+#Casos por sexo y grupo de edad en Sonora temporada inter-estacional 2024
+estacional %>%
+  filter(temporada == actual,
+         CLASFLU == 'CONF LAB' & RESDEFIN %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO')) %>%
+  bind_rows(
+estacional %>%
+  filter(temporada == actual,
+         CLASFLU == 'CONF LAB' & RESDEFIN2 %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO')) 
+  ) %>% 
+  mutate(GPO_EDAD = cut(EDAD, 
+                        breaks = c(0,5,14,24,44,59,Inf),
+                        labels = c('0 - 5', '6 - 14', '15 - 24', '25 - 44','45 - 59', '60 y más'),
+                        include.lowest = T)) %>%
+  mutate(GPO_EDAD = fct(as.character(GPO_EDAD), levels = c('0 - 5', '6 - 14', '15 - 24', '25 - 44','45 - 59', '60 y más'))) %>% 
+  count(GPO_EDAD, SEXO) %>% 
+  pivot_wider(values_from = n, names_from = SEXO, values_fill = 0) %>%
+  full_join(tibble(GPO_EDAD = factor(NA, levels = c('0 - 5', '6 - 14', '15 - 24', '25 - 44','45 - 59', '60 y más')), FEMENINO = 0, MASCULINO = 0)) %>% 
+  rename(Mujer = FEMENINO, Hombre = MASCULINO) %>% 
+  full_join(
+    tibble(GPO_EDAD = factor(c('0 - 5', '6 - 14', '15 - 24', '25 - 44','45 - 59', '60 y más')))) %>%
+  filter(!is.na(GPO_EDAD)) %>% 
+  replace(is.na(.), 0) %>%
+  arrange(GPO_EDAD) %>% select(GPO_EDAD, Mujer, Hombre) %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c(10, 25, 50, -1), 
+                                                 c(10, 25, 50, 'All'))))
+```
+
+#-	Casos y defunciones de Influenza por temporada estacional y subtipo viral `r year(Sys.Date())-2`-`r year(Sys.Date())-1` y `r year(Sys.Date())-1`-`r year(Sys.Date())`
+
+```{r, echo=FALSE, message=F, warning=F}
+#Casos y defunciones de Influenza por temporada inter-estacional y subtipo viral 2023-2024
+estacional %>% 
+     filter(ORIGEN == 'USMI', temporada == '2023-2024', CLASFLU == 'CONF LAB') %>%
+     bind_rows(
+         estacional %>% 
+             filter(ORIGEN == 'USMI', temporada == '2023-2024', CLASFLU == 'CONF LAB', !is.na(RESDEFIN2)) %>%
+             mutate(RESDEFIN = RESDEFIN2)
+     ) %>% 
+     filter(RESDEFIN %in% c('A H1', 'A H3','B', 'INF A', 'INF AH1N1 PMD','NO SUBTIPIFICADO')) %>% 
+     count(Subtipo = RESDEFIN) %>% 
+  rename('Temporada anterior' = n) %>% 
+  full_join(
+    estacional %>% 
+     filter(ORIGEN == 'USMI', temporada == actual, CLASFLU == 'CONF LAB') %>%
+     bind_rows(
+         estacional %>% 
+             filter(ORIGEN == 'USMI', temporada == actual, CLASFLU == 'CONF LAB', !is.na(RESDEFIN2)) %>%
+             mutate(RESDEFIN = RESDEFIN2)
+     ) %>% 
+     filter(RESDEFIN %in% c('A H1', 'A H3','B', 'INF A', 'INF AH1N1 PMD','NO SUBTIPIFICADO')) %>% 
+     count(Subtipo = RESDEFIN) %>% 
+      rename('Temporada actual' = n)
+  ) %>% 
+  full_join(
+    estacional %>% 
+     filter(ORIGEN == 'USMI', temporadad == '2023-2024', CLASFLU == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>%
+     bind_rows(
+         estacional %>% 
+             filter(ORIGEN == 'USMI', temporadad == '2023-2024', CLASFLU == 'CONF LAB', !is.na(RESDEFIN2), EVOLUCI == 'DEFUNCION') %>%
+             mutate(RESDEFIN = RESDEFIN2)
+     ) %>% 
+     filter(RESDEFIN %in% c('A H1', 'A H3','B', 'INF A', 'INF AH1N1 PMD','NO SUBTIPIFICADO')) %>% 
+     count(Subtipo = RESDEFIN) %>% 
+      rename('Defunciones anterior' = n)
+  ) %>% 
+  full_join(
+    estacional %>% 
+     filter(ORIGEN == 'USMI', temporadad == actual, CLASFLU == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>%
+     bind_rows(
+         estacional %>% 
+             filter(ORIGEN == 'USMI', temporadad == actual, CLASFLU == 'CONF LAB', !is.na(RESDEFIN2), EVOLUCI == 'DEFUNCION') %>%
+             mutate(RESDEFIN = RESDEFIN2)
+     ) %>% 
+     filter(RESDEFIN %in% c('A H1', 'A H3','B', 'INF A', 'INF AH1N1 PMD','NO SUBTIPIFICADO')) %>% 
+     count(Subtipo = RESDEFIN) %>% 
+      rename('Defunciones actual' = n)
+  ) %>% replace(is.na(.), 0) %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c(10, 25, 50, -1), 
+                                                 c(10, 25, 50, 'All'))))
+```
+
+#-	Casos de influenza por semana de inicio de síntomas, temporada estacional 2022, 2023 y 2024-25
+
+```{r, echo=FALSE, message=F, warning=F}
+#Casos de influenza por semana de inicio de síntomas, temporada inter-estacional 2022, 2023 y 2024
+estacional  %>% 
+  filter(temporada == '2022-2023', ORIGEN == 'USMI',
+         CLASFLU == 'CONF LAB' & RESDEFIN %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO')) %>% 
+  bind_rows(
+   estacional  %>% 
+  filter(temporada == '2022-2023', ORIGEN == 'USMI',
+         CLASFLU == 'CONF LAB' & RESDEFIN2 %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO')) 
+  ) %>% 
+  count(semana = week) %>% 
+  rename('Temporada 2022' = n) %>% 
+  full_join(
+    estacional %>% 
+      filter(temporada == '2023-2024', ORIGEN == 'USMI',
+             CLASFLU == 'CONF LAB' & RESDEFIN %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO')) %>%
+      bind_rows(
+    estacional %>% 
+      filter(temporada == '2023-2024', ORIGEN == 'USMI',
+             CLASFLU == 'CONF LAB' & RESDEFIN2 %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO'))    
+      ) %>% 
+      count(semana = week) %>% 
+      rename('Temporada 2023' = n)
+  ) %>% 
+  full_join(
+    estacional %>% 
+      filter(temporada == '2024-2025', ORIGEN == 'USMI',
+             CLASFLU == 'CONF LAB' & RESDEFIN %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO')) %>% 
+      bind_rows(
+    estacional %>% 
+      filter(temporada == '2024-2025', ORIGEN == 'USMI',
+             CLASFLU == 'CONF LAB' & RESDEFIN2 %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO'))  
+      ) %>% 
+      count(semana = week) %>% 
+      rename('Temporada 2024' = n)
+  ) %>% 
+  right_join(semana) %>%
+  #mutate(semana = factor(semana, levels = c(seq(40,52), seq(1,20)))) %>% 
+  arrange(semana) %>% 
+replace(is.na(.), 0) %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c(10, 25, 50, -1), 
+                                                 c(10, 25, 50, 'All'))))
+
+
+```
+
+#-	Canal endémico de influenza temporada interestacional
+
+```{r, echo=FALSE, message=F, warning=F, eval=F}
+
+#ESTA PARTE NO SE CORRE
+#Canal endémico de influenza temporada interestacional
+can <- sishist %>% mutate(CERTIDEF = as.character(CERTIDEF)) %>% 
+          #select(ORIGEN, SECTOR, ID_REGISTRO, CVEENTUNI, CVEMUNUNI, ENTIDAD, DELEGA, UNIDAD, FECHREG, CLUES, `FOLIO SINAVE`, FOLIO_IMSS, APEPATER, APEMATER, NOMBRE, SEXO, CURP, ENTNACI, ENTRESI, CVENTINE, MPIORESI, CVEMUNI, LOCRESI, CVELOCAL, LATLOCA, LONGLOCA, TIPACIEN, EVOLUCI, FEGRESO, FECDEF, SEMDEF, CERTIDEF, DEFPORINF, DEFVERIFI, INTUBADO, DIGCLINE, FECNACI, EDAD, NACIONA, ESTAEMBA, MESESEMB, DOMICILIO, CP, TELEFONO, ESINDIGE, HABLEIND, OCUPACIO, SERINGRE, FECINGRE, FECINISI, DIAGPROB, FIEBRE, TOS, ODINOGIA, DISNEA, IRRITABI, DIARREA, DOTORACI, CALOFRIOS, CEFALEA, MIALGIAS, ARTRAL, ATAEDOGE, RINORREA, POLIPNEA, VOMITO, DOLABDO, CONJUN, CIANOSIS, INISUBIS, ANOSMIA, DISGEUSIA, ASINTOMATICO, DIABETES, EPOC, ASMA, INMUSUPR, HIPERTEN, `VIH/SIDA`, OTRACON, ENFCARDI, OBESIDAD, INSRENCR, TABAQUIS, RECTRATA, TXCROBIA, TXANTIVI, ANTIVIRA, FECINITXANTIVI, CONOCASO, CONTAVES, CONCERDO, CONANIMA, VACUNADO, FECVAEST, TOMMUE, LABORA, FOLLABOR, RESDEFIN, RESDEFIN2, ESMIGRA, PAISNAL, PAISORI, FINGMEX, PAISTRAN1, PAISTRAN2, PAISTRAN3, PAISTRAN4, PUERPERIO, DIASPUERP, ANTIPIRETICOS, UCI, ORIGEN_DATOS, ASODIC, ANTIGENCOVID, FECMUEANT, CLASCOVID19, CLASFLU, CLASVSR, PROTOCOLO, VACUNA_COV, TIPO_VAC_COV, FEC_VAC_COV, REF_VAC_COV, FEC_REF_VAC_COV, BROTE, FOL_BROTE, LINAJE, VIAJE1, VIAJE2, VIAJE3, VIAJE4, VIAJE5, semana, semanad, year, week) %>% rename('VIH SIDA' = `VIH/SIDA`) %>% 
+  bind_rows(sisver) %>% 
+  filter(year(dmy(FECINISI)) %in% c(2019, 2020, 2021, 2022, 2023, 2024),
+         epiweek(dmy(FECINISI)) %in% seq(21,39), 
+         CLASFLU == 'CONF LAB' | 
+           RESDEFIN %in% c('A H1',
+                           'A H3',
+                           'B',
+                           'INF A',
+                           'INF AH1N1 PMD',
+                           'NO SUBTIPIFICADO') | 
+           RESDEFIN2 %in% c('A H1',
+                            'A H3',
+                            'B',
+                            'INF A',
+                            'INF AH1N1 PMD',
+                            'NO SUBTIPIFICADO')) %>% 
+  count(año = year(dmy(FECINISI)), semana = epiweek(dmy(FECINISI))) %>%
+  pivot_wider(names_from = año, values_from = n, values_fill = 0) %>% 
+  right_join(tibble(semana = c(seq(40,52), seq(1, 20)), `2020` = 0)) %>% 
+  arrange(semana) %>% 
+  select(semana, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>% 
+  replace(is.na(.), 0) %>% 
+  rowwise() %>% 
+  mutate(Q1 = summary(c(`2019`, `2020`, `2021`, `2022`, `2023`))[2],
+         Q2 = summary(c(`2019`, `2020`, `2021`, `2022`, `2023`))[3],
+         Q3 = summary(c(`2019`, `2020`, `2021`, `2022`, `2023`))[5]) %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c(10, 25, 50, -1), 
+                                                 c(10, 25, 50, 'All'))))
+
+
+```
+
+#-	Canal endémico de influenza temporada interestacional
+
+```{r, echo=FALSE, message=F, warning=F, eval=F}
+
+#ESTA PARTE NO SE CORRE
+#Canal endémico de influenza temporada interestacional
+sishist %>% mutate(CLASVSR = NA, BROTE = NA, FOL_BROTE = NA) %>% 
+          select(ORIGEN, SECTOR, ID_REGISTRO, CVEENTUNI, CVEMUNUNI, ENTIDAD, DELEGA, UNIDAD, FECHREG, CLUES, `FOLIO SINAVE`, FOLIO_IMSS, APEPATER, APEMATER, NOMBRE, SEXO, CURP, ENTNACI, ENTRESI, CVENTINE, MPIORESI, CVEMUNI, LOCRESI, CVELOCAL, LATLOCA, LONGLOCA, TIPACIEN, EVOLUCI, FEGRESO, FECDEF, SEMDEF, CERTIDEF, DEFPORINF, DEFVERIFI, INTUBADO, DIGCLINE, FECNACI, EDAD, NACIONA, ESTAEMBA, MESESEMB, DOMICILIO, CP, TELEFONO, ESINDIGE, HABLEIND, OCUPACIO, SERINGRE, FECINGRE, FECINISI, DIAGPROB, FIEBRE, TOS, ODINOGIA, DISNEA, IRRITABI, DIARREA, DOTORACI, CALOFRIOS, CEFALEA, MIALGIAS, ARTRAL, ATAEDOGE, RINORREA, POLIPNEA, VOMITO, DOLABDO, CONJUN, CIANOSIS, INISUBIS, ANOSMIA, DISGEUSIA, ASINTOMATICO, DIABETES, EPOC, ASMA, INMUSUPR, HIPERTEN, `VIH/SIDA`, OTRACON, ENFCARDI, OBESIDAD, INSRENCR, TABAQUIS, RECTRATA, TXCROBIA, TXANTIVI, ANTIVIRA, FECINITXANTIVI, CONOCASO, CONTAVES, CONCERDO, CONANIMA, VACUNADO, FECVAEST, TOMMUE, LABORA, FOLLABOR, RESDEFIN, RESDEFIN2, ESMIGRA, PAISNAL, PAISORI, FINGMEX, PAISTRAN1, PAISTRAN2, PAISTRAN3, PAISTRAN4, PUERPERIO, DIASPUERP, ANTIPIRETICOS, UCI, ORIGEN_DATOS, ASODIC, ANTIGENCOVID, FECMUEANT, CLASCOVID19, CLASFLU, CLASVSR, PROTOCOLO, VACUNA_COV, TIPO_VAC_COV, FEC_VAC_COV, REF_VAC_COV, FEC_REF_VAC_COV, BROTE, FOL_BROTE, LINAJE, VIAJE1, VIAJE2, VIAJE3, VIAJE4, VIAJE5, semana, semanad, year, week) %>% rename('VIH SIDA' = `VIH/SIDA`) %>%
+  rbind(sisver) %>% 
+  filter(year(dmy(FECINISI)) %in% c(2019, 2020, 2021, 2022, 2023, 2024, 2025),
+         epiweek(dmy(FECINISI)) %in% c(seq(40, 52), seq(1,20)), 
+         CLASFLU == 'CONF LAB' | 
+           RESDEFIN %in% c('A H1',
+                           'A H3',
+                           'B',
+                           'INF A',
+                           'INF AH1N1 PMD',
+                           'NO SUBTIPIFICADO') | 
+           RESDEFIN2 %in% c('A H1',
+                            'A H3',
+                            'B',
+                            'INF A',
+                            'INF AH1N1 PMD',
+                            'NO SUBTIPIFICADO')) %>% 
+  count(año = year(dmy(FECINISI)), semana = epiweek(dmy(FECINISI))) %>%
+  pivot_wider(names_from = año, values_from = n, values_fill = 0) %>% 
+  right_join(tibble(semana = c(seq(40, 52), seq(1,20)), `2020` = 0)) %>% 
+  arrange(semana) %>% 
+  select(semana, `2019`, `2020`, `2021`, `2022`, `2023`, `2024`) %>% 
+  replace(is.na(.), 0) %>% 
+  rowwise() %>% 
+  mutate(Q1 = as.numeric(summary(c(`2019`, `2020`, `2021`, `2022`, `2023`))[2]),
+         Q2 = as.numeric(summary(c(`2019`, `2020`, `2021`, `2022`, `2023`))[3]),
+         Q3 = as.numeric(summary(c(`2019`, `2020`, `2021`, `2022`, `2023`))[5])) %>%  
+ plot_ly(x = ~semana) %>%
+  add_ribbons(
+    ymax = ~Q3, ymin = ~Q2, opacity = 0.3,
+    line = list(color = 'red'), fillcolor = 'red',
+    name = "Zona de alerta (Q3)") %>%
+  add_ribbons(
+    ymax = ~Q2, ymin = ~Q1, opacity = 0.3,
+    line = list(color = 'yellow'), fillcolor = 'yellow',
+    name = "Zona de seguridad (Q2)") %>%
+  add_ribbons(
+    ymax = ~Q1, ymin = 0, opacity = 0.3,
+    line = list(color = 'green'), fillcolor = 'green',
+    name = "Zona de éxito (Q1)") %>%
+  add_lines(y = ~`2024`, name = 'Casos', mode = 'line', line = list(color = 'black'), marker = list(color = 'black')) %>%
+  layout(title = paste('Canal endémico de influenza temporada interestacional, Sonora,', year(Sys.Date()), sep = ''),
+         xaxis = list(title = 'Semana de inicio de síntomas', 
+                      showgrid = F,
+                      ticks="outside",
+                      zerolinecolor = '#000000',
+                      tickangle=270,
+                      nticks = 12),
+         yaxis = list(title = 'Casos',
+                      showgrid = F,
+                      ticks="outside",
+                      zerolinecolor = '#000000')
+  )
+
+```
+
+
+
+## OVR 
+
+#-	Casos, hospitalizados y defunciones temporada estacional `r year(Sys.Date())-1`-`r year(Sys.Date())`
+
+```{r, echo=FALSE, message=F, warning=F}
+#Casos, hospitalizados y defunciones temporada inter-estacional 2024
+estacional %>% 
+  filter(temporada == actual,
+         !RESDEFIN %in% c('SARS-CoV-2',
+                          'RECHAZADA',
+                          'NO ADECUADO', 
+                          'NEGATIVO',
+                          'INF AH1N1 PMD',
+                          'B',
+                          'A H3',
+                          'INF A',
+                          'A H1'), 
+         !is.na(RESDEFIN)) %>% 
+    bind_rows(
+      estacional %>% 
+  filter(temporada == actual,
+         !RESDEFIN2 %in% c('SARS-CoV-2',
+                          'RECHAZADA',
+                          'NO ADECUADO', 
+                          'NEGATIVO',
+                          'INF AH1N1 PMD',
+                          'B',
+                          'A H3',
+                          'INF A',
+                          'A H1'), 
+         !is.na(RESDEFIN2)) 
+    ) %>% #distinct(`ID_REGISTRO`, .keep_all = T) %>% 
+  count(semana = week, TIPACIEN) %>% 
+  pivot_wider(values_from = n, names_from = TIPACIEN, values_fill = 0) %>% 
+ full_join(
+  estacional %>% 
+  filter(EVOLUCI == 'DEFUNCION', temporadad == actual,
+         !RESDEFIN %in% c('SARS-CoV-2',
+                          'RECHAZADA',
+                          'NO ADECUADO', 
+                          'NEGATIVO',
+                          'INF AH1N1 PMD',
+                          'B',
+                          'A H3',
+                          'INF A',
+                          'A H1'), 
+         !is.na(RESDEFIN)) %>% 
+    bind_rows(
+      estacional %>% 
+  filter(EVOLUCI == 'DEFUNCION', temporadad == actual,
+         !RESDEFIN2 %in% c('SARS-CoV-2',
+                          'RECHAZADA',
+                          'NO ADECUADO', 
+                          'NEGATIVO',
+                          'INF AH1N1 PMD',
+                          'B',
+                          'A H3',
+                          'INF A',
+                          'A H1'), 
+         !is.na(RESDEFIN2))  
+    ) %>% #distinct(`ID_REGISTRO`, .keep_all = T) %>% 
+    count(semana = weekd) %>%
+    rename('DEFUNCIONES' = n)  
+ ) %>% 
+  arrange(semana) %>% 
+replace(is.na(.), 0) %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c(10, 25, 50, -1), 
+                                                 c(10, 25, 50, 'All'))))
+   
+  
+  
+
+```
+
+
+#-	Comparativo casos y defunciones en temporada estacional `r year(Sys.Date()) - 2` - `r year(Sys.Date())-1` vs `r year(Sys.Date())-1` - `r year(Sys.Date())`
+
+```{r, echo=FALSE, message=F, warning=F}
+#Comparativo casos y defunciones en temporada inter-estacional 2023-2024
+#estacional %>% 
+ # filter(temporada == '2023-2024',
+  #       !RESDEFIN %in% c('SARS-CoV-2',
+   #                       'RECHAZADA',
+    #                      'NO ADECUADO', 
+     #                     'NEGATIVO',
+      #                    'INF AH1N1 PMD',
+       #                   'B',
+        #                  'A H3',
+         #                 'INF A',
+          #                'A H1'),
+         #!is.na(RESDEFIN)) %>% 
+  #count(semana = week) %>% 
+  #rename('Temporada anterior' = n) %>% 
+  #full_join(
+   # estacional %>% 
+    #  filter(temporada == actual,
+     #    !RESDEFIN %in% c('SARS-CoV-2',
+      #                    'RECHAZADA',
+       #                   'NO ADECUADO', 
+        #                  'NEGATIVO',
+         #                 'INF AH1N1 PMD',
+          #                'B',
+           #               'A H3',
+            #              'INF A',
+             #             'A H1'),
+        # !is.na(RESDEFIN)) %>% 
+  #count(semana = week) %>% 
+  #rename('Temporada actual' = n)
+  #) %>% 
+  #right_join(semana) %>%
+  #arrange(semana) %>% 
+  #replace(is.na(.), 0) %>% 
+  #DT::datatable(extensions = 'Buttons', rownames = F, 
+  #              options = list(dom = 'Blfrtip', 
+   #                            buttons = 'excel', 
+    #                           lengthMenu = list(c(10, 25, 50, -1), 
+     #                                            c(10, 25, 50, 'All'))))
+
+
+
+estacional %>% 
+  filter(temporada == '2023-2024',
+         !RESDEFIN %in% c('SARS-CoV-2',
+                          'RECHAZADA',
+                          'NO ADECUADO', 
+                          'NEGATIVO',
+                          'INF AH1N1 PMD',
+                          'B',
+                          'A H3',
+                          'INF A',
+                          'A H1'),
+         !is.na(RESDEFIN)) %>% 
+bind_rows(
+  estacional %>% 
+  filter(temporada == '2023-2024',
+         !RESDEFIN2 %in% c('SARS-CoV-2',
+                          'RECHAZADA',
+                          'NO ADECUADO', 
+                          'NEGATIVO',
+                          'INF AH1N1 PMD',
+                          'B',
+                          'A H3',
+                          'INF A',
+                          'A H1'),
+         !is.na(RESDEFIN2)) 
+) %>% #distinct(`ID_REGISTRO`, .keep_all = T) %>% 
+  count(semana = week) %>% 
+  rename('Temporada anterior' = n) %>% 
+  full_join(
+    estacional %>% 
+      filter(temporada == actual,
+         !RESDEFIN %in% c('SARS-CoV-2',
+                          'RECHAZADA',
+                          'NO ADECUADO', 
+                          'NEGATIVO',
+                          'INF AH1N1 PMD',
+                          'B',
+                          'A H3',
+                          'INF A',
+                          'A H1'),
+         !is.na(RESDEFIN)) %>% 
+      bind_rows(
+        estacional %>% 
+      filter(temporada == actual,
+         !RESDEFIN2 %in% c('SARS-CoV-2',
+                          'RECHAZADA',
+                          'NO ADECUADO', 
+                          'NEGATIVO',
+                          'INF AH1N1 PMD',
+                          'B',
+                          'A H3',
+                          'INF A',
+                          'A H1'),
+         !is.na(RESDEFIN2))
+      ) %>% #distinct(`ID_REGISTRO`, .keep_all = T) %>% 
+  count(semana = week) %>% 
+  rename('Temporada actual' = n)
+  ) %>% 
+  right_join(semana) %>%
+  arrange(semana) %>% 
+  replace(is.na(.), 0) %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c(10, 25, 50, -1), 
+                                                 c(10, 25, 50, 'All'))))
+
+
+```
+
+#-	Casos confirmados por semana de inicio de sintomas de OVR en temporada estacional `r year(Sys.Date())-1`-`r year(Sys.Date())`
+
+```{r, echo=FALSE, message=F, warning=F}
+#Casos confirmados por semana de inicio de sintomas de OVR em temporada inter-estacional 2024
+estacional %>% 
+  filter(temporada == actual,
+         !RESDEFIN %in% c('SARS-CoV-2',
+                          'RECHAZADA',
+                          'NO ADECUADO', 
+                          'NEGATIVO',
+                          'INF AH1N1 PMD',
+                          'B',
+                          'A H3',
+                          'INF A',
+                          'A H1'),
+         !is.na(RESDEFIN)) %>% 
+  bind_rows(
+    estacional %>% 
+  filter(temporada == actual,
+         !RESDEFIN2 %in% c('SARS-CoV-2',
+                          'RECHAZADA',
+                          'NO ADECUADO', 
+                          'NEGATIVO',
+                          'INF AH1N1 PMD',
+                          'B',
+                          'A H3',
+                          'INF A',
+                          'A H1'),
+         !is.na(RESDEFIN2))
+  ) %>% #distinct(`ID_REGISTRO`, .keep_all = T) %>% 
+  count(semana = week) %>%
+   # right_join(tibble(semana = c(seq(40, 52), seq(1, 20)))) %>%
+  #mutate(semana = factor(semana, levels = c(seq(40,52), seq(1,20)))) %>% 
+  arrange(semana) %>% 
+rename(Casos = n) %>% 
+  replace(is.na(.), 0) %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c(10, 25, 50, -1), 
+                                                 c(10, 25, 50, 'All'))))
+
+```
+#-	Casos acumulados de OVR por municipio en temporada estacional `r year(Sys.Date())-1`-`r year(Sys.Date())`
+
+```{r, echo=FALSE, message=F, warning=F}
+estacional %>% 
+  filter(ORIGEN == 'USMI', !RESDEFIN %in% c('SARS-CoV-2',
+                                            'RECHAZADA',
+                                            'NO ADECUADO', 
+                                            'NEGATIVO',
+                                            'INF AH1N1 PMD',
+                                            'B',
+                                            'A H3',
+                                            'INF A',
+                                            'A H1'),  !is.na(RESDEFIN),
+         temporada == actual) %>%
+  mutate(RESDEFIN = case_when(
+    RESDEFIN %in% c('NEGATIVO', 'NO ADECUADO', 'RECHAZADA') ~ 'NEGATIVO/NO ADECUADO/RECHAZADA',
+    is.na(RESDEFIN) ~ 'SIN RESULTADO',
+    T ~ RESDEFIN
+  )) %>% 
+  bind_rows(
+    estacional %>% 
+  filter(ORIGEN == 'USMI', !RESDEFIN2 %in% c('SARS-CoV-2',
+                                            'RECHAZADA',
+                                            'NO ADECUADO', 
+                                            'NEGATIVO',
+                                            'INF AH1N1 PMD',
+                                            'B',
+                                            'A H3',
+                                            'INF A',
+                                            'A H1'),  !is.na(RESDEFIN2),
+         temporada == actual) %>%
+  mutate(RESDEFIN = case_when(
+    RESDEFIN2 %in% c('NEGATIVO', 'NO ADECUADO', 'RECHAZADA') ~ 'NEGATIVO/NO ADECUADO/RECHAZADA',
+    is.na(RESDEFIN2) ~ 'SIN RESULTADO',
+    T ~ RESDEFIN2
+  ))
+  ) %>% #distinct(`ID_REGISTRO`, .keep_all = T) %>% 
+  mutate(CVEMUNI = parse_number(CVEMUNI)) %>% 
+  count(MPIORESI) %>% 
+  rename(MUNICIPIO = MPIORESI, Casos = n) %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c(10, 25, 50, -1), 
+                                                 c(10, 25, 50, 'All'))))
+
+```
+#-	Casos por sexo y grupo de edad en Sonora temporada estacional `r year(Sys.Date())-1`-`r year(Sys.Date())`
+
+```{r, echo=FALSE, message=F, warning=F}
+#Casos por sexo y grupo de edad en Sonora temporada inter-estacional 2024
+estacional %>%
+  filter(temporada == actual,
+         !RESDEFIN %in% c('SARS-CoV-2',
+                          'RECHAZADA',
+                          'NO ADECUADO', 
+                          'NEGATIVO',
+                          'INF AH1N1 PMD',
+                          'B',
+                          'A H3', 
+                          'INF A',
+                          'A H1'),
+         !is.na(RESDEFIN)) %>% 
+  bind_rows(
+    estacional %>%
+  filter(temporada == actual,
+         !RESDEFIN2 %in% c('SARS-CoV-2',
+                          'RECHAZADA',
+                          'NO ADECUADO', 
+                          'NEGATIVO',
+                          'INF AH1N1 PMD',
+                          'B',
+                          'A H3', 
+                          'INF A',
+                          'A H1'),
+         !is.na(RESDEFIN2))
+  ) %>% #distinct(`ID_REGISTRO`, .keep_all = T) %>% 
+  mutate(GPO_EDAD = cut(EDAD, 
+                        breaks = c(0,5,14,24,44,59,Inf),
+                        labels = c('0 - 5', '6 - 14', '15 - 24', '25 - 44','45 - 59', '60 y más'),
+                        include.lowest = T)) %>%
+  mutate(GPO_EDAD = fct(as.character(GPO_EDAD), levels = c('0 - 5', '6 - 14', '15 - 24', '25 - 44','45 - 59', '60 y más'))) %>% 
+  count(GPO_EDAD, SEXO) %>% 
+  pivot_wider(values_from = n, names_from = SEXO, values_fill = 0) %>%
+  full_join(tibble(GPO_EDAD = factor(NA, levels = c('0 - 5', '6 - 14', '15 - 24', '25 - 44','45 - 59', '60 y más')), FEMENINO = 0, MASCULINO = 0)) %>% 
+  rename(Mujer = FEMENINO, Hombre = MASCULINO) %>% 
+  full_join(
+    tibble(GPO_EDAD = factor(c('0 - 5', '6 - 14', '15 - 24', '25 - 44','45 - 59', '60 y más')))) %>%
+  filter(!is.na(GPO_EDAD)) %>% 
+  replace(is.na(.), 0) %>%
+  arrange(GPO_EDAD) %>% select(GPO_EDAD, Mujer, Hombre) %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c(10, 25, 50, -1), 
+                                                 c(10, 25, 50, 'All'))))
+
+```
+
+
+```{r, echo=FALSE, message=F, warning=F}
+## SEMANA -----
+
+SE <- paste(year(Sys.Date()), '-', epiweek(Sys.Date()) - 1, sep = '')
+SEant <- paste(year(Sys.Date()), '-', epiweek(Sys.Date()) - 2, sep = '')
+CC <- estacional %>%
+  filter(temporada == actual, CLASCOVID19 == 'CONF LAB', ORIGEN == 'USMI')
+DEF <- estacional %>%
+  filter(temporada == actual, CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION')
+ESTUDIADOS <- estacional %>%
+  filter(temporada == actual, ORIGEN == 'USMI')
+
+POSITIVIDAD <- sisver %>% 
+  filter(ORIGEN == 'USMI', CLASCOVID19 %in% c('CONF LAB', 'NEGATIVO'), ENTIDAD == 'SONORA') %>%
+  count(year, epiweek(FECINISI), CLASCOVID19) %>% 
+  pivot_wider(values_from = n, names_from = c(CLASCOVID19, year), values_fill = 0) %>%
+  #left_join(sisver %>% 
+              #filter(ORIGEN == 'USMI', CLASCOVID19 %in% c('CONF LAB', 'NEGATIVO'), year %in% 2023:2024) %>%
+              #count(year, week, CLASCOVID19) %>%
+              #pivot_wider(values_from = n, names_from = c(CLASCOVID19, year), values_fill = 0) #%>% 
+              #rename(`CONF LAB_2023` = `CONF LAB`, NEGATIVO_2023 = NEGATIVO)
+              #) %>% 
+  #left_join(tibble(epiweek(FECINISI) = NA, `CONF LAB_2024` = NA, NEGATIVO_2024 = NA)) %>% 
+  #filter(!is.na(week)) %>% 
+  #mutate(`CONF LAB_2024` = ifelse(is.na(`CONF LAB_2024`), 0, `CONF LAB_2024`)) %>% 
+  #mutate(`CONF LAB_2023` = case_when(
+  #  week <= epiweek(Sys.Date()) - 1 & is.na(`CONF LAB_2023`) ~ 0,
+  #  T ~ `CONF LAB_2023` 
+  #), NEGATIVO_2023 = case_when(
+  #  week <= epiweek(Sys.Date()) - 1 & is.na(NEGATIVO_2023) ~ 0,
+  #  T ~ NEGATIVO_2023
+  #)) %>% 
+  mutate(p_2020 = round(`CONF LAB_2020`/(`CONF LAB_2020`+NEGATIVO_2020)*100, 1),
+         p_2021 = round(`CONF LAB_2021`/(`CONF LAB_2021`+NEGATIVO_2021)*100, 1),
+         p_2022 = round(`CONF LAB_2022`/(`CONF LAB_2022`+NEGATIVO_2022)*100, 1),
+         p_2023 = round(`CONF LAB_2023`/(`CONF LAB_2023`+NEGATIVO_2023)*100, 1),
+         p_2024 = round(`CONF LAB_2024`/(`CONF LAB_2024`+NEGATIVO_2024)*100, 1),
+         p_2025 = round(`CONF LAB_2025`/(`CONF LAB_2025`+NEGATIVO_2025)*100, 1)
+         ) 
+
+
+POSITIVIDAD %>% 
+  openxlsx::write.xlsx('datos/SISVER/NUEVO/casos_positividad.xlsx', overwrite = T)
+
+POSITIVIDAD %>% 
+  plot_ly(x = ~`epiweek(FECINISI)`, y = ~`CONF LAB_2025`, name = 'Casos', type = 'bar', marker = list(color = 'rgb(65, 3, 36)')) %>% 
+  add_lines(y = ~p_2025, name = 'Positividad PCR', marker = list(color = 'rgb(220, 127, 55)'), yaxis = "y2") %>% 
+  layout(title = '', legend = list(x = 1.1, y = 0.9, orientation = "v"),
+         yaxis2 = list(title = "Positividad", side = "right", showgrid = F, ticks="outside",
+                       zerolinecolor = '#000000', overlaying = "y", range = c(0, 1.2 * max(POSITIVIDAD$p_2025, na.rm = T))),
+         xaxis = list(title = 'Semana epidemiológica',
+                      showgrid = F,
+                      ticks="outside", tick0 = 1, dtick = 1, range = c(0, epiweek(Sys.Date()) - 1),
+                      zerolinecolor = '#000000', 
+                      tickangle=270#, categoryorder = "array", categoryarray = c(quinqueniosarray)
+         ),
+         yaxis = list(title = 'Número de casos',
+                      showgrid = F,
+                      ticks="outside", tickformat = ",d",
+                      zerolinecolor = '#000000', range = c(0, 1.1 * max(POSITIVIDAD$`CONF LAB_2025`, na.rm = T)))#, 
+         #barmode = "stack"
+  )
+
+
+POSITIVIDAD %>% 
+  plot_ly(x = ~`epiweek(FECINISI)`, y = ~`CONF LAB_2020`, name = '2020', type = 'scatter', mode = 'lines', fill = 'tozeroy') %>%
+  add_lines(y = ~`CONF LAB_2021`, name = '2021', fill = 'tozeroy') %>%
+  add_lines(y = ~`CONF LAB_2022`, name = '2022', fill = 'tozeroy') %>%
+  add_lines(y = ~`CONF LAB_2023`, name = '2023', fill = 'tozeroy') %>% 
+  add_lines(y = ~`CONF LAB_2024`, name = '2024', fill = 'tozeroy') %>% 
+  add_lines(y = ~`CONF LAB_2025`, name = '2025', fill = 'tozeroy') %>% 
+  layout(title = '', legend = list(x = 1.1, y = 0.9, orientation = "v"),
+         xaxis = list(title = 'Semana epidemiológica',
+                      showgrid = F,
+                      ticks="outside", tick0 = 1, dtick = 1, range = c(0, 52),
+                      zerolinecolor = '#000000', 
+                      tickangle=270#, categoryorder = "array", categoryarray = c(quinqueniosarray)
+         ),
+         yaxis = list(title = 'Número de casos',
+                      showgrid = F,
+                      ticks="outside", tickformat = ",d",
+                      zerolinecolor = '#000000', range = c(0, 1.1 * max(POSITIVIDAD$`CONF LAB_2020`, na.rm = T)))#, 
+         #barmode = "stack"
+  )
+
+POSITIVIDAD %>% 
+  plot_ly(x = ~`epiweek(FECINISI)`, y = ~`p_2020`, name = '2020', type = 'scatter', mode = 'lines', line = list(dash = 'dash')) %>%
+  add_lines(y = ~`p_2021`, name = '2021', line = list(dash = 'dash')) %>%
+  add_lines(y = ~`p_2022`, name = '2022', line = list(dash = 'dash')) %>%
+  add_lines(y = ~`p_2023`, name = '2023', line = list(dash = 'dash')) %>% 
+  add_lines(y = ~`p_2024`, name = '2024', line = list(dash = 'dash')) %>% 
+  add_lines(y = ~`p_2025`, name = '2025', line = list(dash = 'dash')) %>% 
+  layout(title = '', legend = list(x = 1.1, y = 0.9, orientation = "v"),
+         xaxis = list(title = 'Semana epidemiológica',
+                      showgrid = F,
+                      ticks="outside", tick0 = 1, dtick = 1, range = c(0, 52),
+                      zerolinecolor = '#000000', 
+                      tickangle=270#, categoryorder = "array", categoryarray = c(quinqueniosarray)
+         ),
+         yaxis = list(title = 'Positividad',
+                      showgrid = F,
+                      ticks="outside", tickformat = ",d",
+                      zerolinecolor = '#000000', range = c(0, 1.1 * max(POSITIVIDAD$`p_2020`, na.rm = T)))#, 
+         #barmode = "stack"
+  )
+
+
+tabla <- estacional %>% 
+  filter(CLASCOVID19 == 'CONF LAB', ORIGEN == 'USMI', temporada == actual) %>%  
+  count(MPIORESI) %>% 
+  rename(Casos = n) %>% 
+  left_join(
+    estacional %>% 
+      filter(CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION', temporadad == actual) %>%  
+      count(MPIORESI) %>% 
+      rename(Defunciones = n)
+  ) %>% 
+  rename(Municipio = MPIORESI) %>% 
+  left_join(poblaciones %>% 
+              rename(Municipio = MUN)
+            ) %>% 
+  mutate(Defunciones = ifelse(is.na(Defunciones), 0, Defunciones)) %>% 
+  mutate(IA = round(Casos/poblacion*100000, 1),
+         letalidad = round(Defunciones/Casos*100, 1)) 
+tabla1 <- tabla %>% rbind(
+tibble(Municipio = 'Total', Casos = sum(tabla$Casos, na.rm = T), Defunciones = sum(tabla$Defunciones, na.rm = T), poblacion = sum(poblaciones$poblacion, na.rm = T),
+       IA = round(sum(tabla$Casos, na.rm = T)/sum(poblaciones$poblacion, na.rm = T)*100000, 1),
+       letalidad = round(sum(tabla$Defunciones, na.rm = T)/sum(tabla$Casos, na.rm = T)*100,1))
+) # %>% 
+#  mutate(Municipio = str_to_title(Municipio))
+
+tabla1  %>% 
+  openxlsx::write.xlsx('datos/SISVER/NUEVO/Municipios_covid.xlsx', overwrite = T)
+
+
+estacional %>% 
+  filter(CLASCOVID19 == 'CONF LAB', ORIGEN == 'USMI', temporada == actual) %>%  #FECINISI >= dmy('29-09-2024')) %>% 
+  mutate(GPO_EDAD = cut(EDAD, 
+                        breaks = c(0,5,14,24,44,59,Inf),
+                        labels = c('0 - 5', '6 - 14', '15 - 24', '25 - 44','45 - 59', '60 y más'),
+                        include.lowest = T)) %>%
+  mutate(GPO_EDAD = fct(as.character(GPO_EDAD), levels = c('0 - 5', '6 - 14', '15 - 24', '25 - 44','45 - 59', '60 y más'))) %>% 
+  count(GPO_EDAD, SEXO) %>% 
+  pivot_wider(values_from = n, names_from = SEXO, values_fill = 0) %>% 
+  #rename(Mujer = FEMENINO, Hombre = MASCULINO) %>% 
+  openxlsx::write.xlsx('datos/SISVER/NUEVO/covid_edad.xlsx', overwrite = T)
+  
+
+
+#sisver.hoy %>% filter(ORIGEN == 'USMI', CLASCOVID19 == 'NEGATIVO', MPIORESI == 'Nogales') %>% count(year(dmy(FECINISI)))
+#  mutate(GPO_EDAD = cut(EDAD, 
+#                        breaks = c(0,5,14,24,44,59,Inf),
+#                        labels = c('0 - 5', '6 - 14', '15 - 24', '25 - 44','45 - 59', '60 y más'),
+#                        include.lowest = T)) %>%
+#  mutate(GPO_EDAD = fct(as.character(GPO_EDAD), levels = c('0 - 5', '6 - 14', '15 - 24', '25 - 44','45 - 59', '60 y más'))) %>% 
+#  count(GPO_EDAD, SEXO) %>% 
+#  pivot_wider(values_from = n, names_from = SEXO, values_fill = 0) %>% 
+#  rename(Mujer = FEMENINO, Hombre = MASCULINO)
+
+
+  
+estacional %>% 
+  filter(ORIGEN == 'USMI', CLASCOVID19 == 'CONF LAB', temporada == actual) %>%  #FECINISI >= dmy('29-05-2024')) %>% 
+  count(week, TIPACIEN) %>% 
+  pivot_wider(names_from = TIPACIEN, values_from = n, values_fill = 0) %>% 
+  #right_join(tibble(week = seq(1,52))) %>% 
+#                               epiweek(Sys.Date()) - 1))) %>%
+  #arrange(week) %>% 
+  rename(Hospitalizado = HOSPITALIZADO, Ambulatorio = AMBULATORIO, Semana = week) %>% 
+  mutate(Hospitalizado = ifelse(is.na(Hospitalizado), 0, Hospitalizado),
+         Ambulatorio = ifelse(is.na(Ambulatorio), 0, Ambulatorio)) %>% 
+  openxlsx::write.xlsx('datos/SISVER/NUEVO/hospitalizadosvsambulatorios.xlsx', overwrite = T)
+  
+  
+estacional %>%
+  filter(ORIGEN == 'USMI', CLASCOVID19 == 'CONF LAB', temporada == actual) %>%  #dmy(FECINISI) >= dmy('29-05-2024')) %>% 
+  mutate(Distrito = case_when(
+    parse_number(CVEMUNUNI) %in% c(1,5,8,9,13,14,20,21,23,24,28,30,32,34,37,38,40,41,44,45,50,52,53,54,56,57,61,62,63,66,67,68) ~ 1,
+    parse_number(CVEMUNUNI) %in% c(4,7,17,46,47,60,65) ~ 2,
+    parse_number(CVEMUNUNI) %in% c(2,6,10,11,15,16,19,22,27,31,35,36,39,43,58,59,64) ~ 3,
+    parse_number(CVEMUNUNI) %in% c(12,18,25,29,49,51,69,72) ~ 4,
+    parse_number(CVEMUNUNI) %in% c(3,26,33,42,71) ~ 5,
+    parse_number(CVEMUNUNI) %in% c(48,55,70) ~ 6
+  )) %>% 
+  count(Distrito) %>% 
+  openxlsx::write.xlsx('datos/SISVER/NUEVO/covid_DS.xlsx', overwrite = T)
+```
+
+
+## Influenza   
+
+```{r, echo=FALSE, message=F, warning=F}
+## SEMANA -----
+#temp_est <- tibble(semana = factor(c(seq(40,52), seq(1,20)), levels = c(seq(40,52), seq(1,20))))
+#temp_int <- tibble(semana = factor(seq(21,39), levels = seq(21,39)))
+estacional <- estacional %>%  
+  filter(`FOLIO SINAVE` != 26321329777, ORIGEN == 'USMI') #%>% 
+  #mutate(temporada_estacional = case_when(
+   # epiweek(floor_date(dmy(FECHREG), 'week')) %in% seq(40,53) ~ paste(year(floor_date(dmy(FECHREG), 'week') + 3), ' - ', year(floor_date(dmy(FECHREG), 'week') + 3) + 1, #sep = ''),
+    #epiweek(floor_date(dmy(FECHREG), 'week')) %in% seq(1,20) ~ paste(year(floor_date(dmy(FECHREG), 'week') + 3) - 1, ' - ', year(floor_date(dmy(FECHREG), 'week') + 3), #sep = ''),
+    #epiweek(floor_date(dmy(FECHREG), 'week')) %in% seq(21,39) ~ paste('Interestacional ', year(floor_date(dmy(FECHREG), 'week') + 3), sep = ''),
+    #T ~ NA
+  #))
+#sishist <- sishist %>% mutate(CLASVSR = NA, BROTE = NA, FOL_BROTE = NA) #%>% 
+#          select(ORIGEN, SECTOR, ID_REGISTRO, CVEENTUNI, CVEMUNUNI, ENTIDAD, DELEGA, UNIDAD, FECHREG, CLUES, `FOLIO SINAVE`, FOLIO_IMSS, APEPATER, APEMATER, NOMBRE, SEXO, CURP, ENTNACI, ENTRESI, CVENTINE, MPIORESI, CVEMUNI, LOCRESI, CVELOCAL, LATLOCA, LONGLOCA, TIPACIEN, EVOLUCI, FEGRESO, FECDEF, SEMDEF, CERTIDEF, DEFPORINF, DEFVERIFI, INTUBADO, DIGCLINE, FECNACI, EDAD, NACIONA, ESTAEMBA, MESESEMB, DOMICILIO, CP, TELEFONO, ESINDIGE, HABLEIND, OCUPACIO, SERINGRE, FECINGRE, FECINISI, DIAGPROB, FIEBRE, TOS, ODINOGIA, DISNEA, IRRITABI, DIARREA, DOTORACI, CALOFRIOS, CEFALEA, MIALGIAS, ARTRAL, ATAEDOGE, RINORREA, POLIPNEA, VOMITO, DOLABDO, CONJUN, CIANOSIS, INISUBIS, ANOSMIA, DISGEUSIA, ASINTOMATICO, DIABETES, EPOC, ASMA, INMUSUPR, HIPERTEN, `VIH/SIDA`, OTRACON, ENFCARDI, OBESIDAD, INSRENCR, TABAQUIS, RECTRATA, TXCROBIA, TXANTIVI, ANTIVIRA, FECINITXANTIVI, CONOCASO, CONTAVES, CONCERDO, CONANIMA, VACUNADO, FECVAEST, TOMMUE, LABORA, FOLLABOR, RESDEFIN, RESDEFIN2, ESMIGRA, PAISNAL, PAISORI, FINGMEX, PAISTRAN1, PAISTRAN2, PAISTRAN3, PAISTRAN4, PUERPERIO, DIASPUERP, ANTIPIRETICOS, UCI, ORIGEN_DATOS, ASODIC, ANTIGENCOVID, FECMUEANT, CLASCOVID19, CLASFLU, CLASVSR, PROTOCOLO, VACUNA_COV, TIPO_VAC_COV, FEC_VAC_COV, REF_VAC_COV, FEC_REF_VAC_COV, BROTE, FOL_BROTE, LINAJE, VIAJE1, VIAJE2, VIAJE3, VIAJE4, VIAJE5, semana, semanad, year, week) %>% rename('VIH SIDA' = `VIH/SIDA`) %>%  
+  #mutate(temporada_estacional = case_when(
+   # epiweek(floor_date(dmy(FECHREG), 'week')) %in% seq(40,53) ~ paste(year(floor_date(dmy(FECHREG), 'week') + 3), ' - ', year(floor_date(dmy(FECHREG), 'week') + 3) + 1, #sep = ''),
+  #  epiweek(floor_date(dmy(FECHREG), 'week')) %in% seq(1,20) ~ paste(year(floor_date(dmy(FECHREG), 'week') + 3) - 1, ' - ', year(floor_date(dmy(FECHREG), 'week') + 3), #sep = ''),
+  #  epiweek(floor_date(dmy(FECHREG), 'week')) %in% seq(21,39) ~ paste('Interestacional ', year(floor_date(dmy(FECHREG), 'week') + 3), sep = ''),
+   # T ~ NA
+  #))
+#sis <- bind_rows(sisver, sishist %>% mutate(CERTIDEF = as.character(CERTIDEF)))
+
+#if (epiweek(Sys.Date()) %in% seq(22,40)){
+ # temporada <- sis %>% 
+  #filter(#str_detect(string = temporada_estacional, pattern = 'Interestacional'),
+   # epiweek(dmy(FECINISI)) %in% seq(21,39),
+    #     ORIGEN == 'USMI') %>% 
+  #mutate(semana = factor(semana, levels = seq(21,39)))
+#} else {
+ # temporada <- sis %>% 
+  #filter(#!str_detect(string = temporada_estacional, pattern = 'Interestacional'),
+   # !epiweek(dmy(FECINISI)) %in% seq(21,39),
+    #     ORIGEN == 'USMI') %>% 
+  #mutate(semana = factor(semana, levels = c(seq(40, 52), seq(1,20))))
+#}
+#temporada <- sis %>% 
+#  filter(!str_detect(string = temporada_estacional, pattern = 'Interestacional'), ORIGEN == 'USMI') %>% 
+#  mutate(semana = factor(semana, levels = c(seq(40, 52), seq(1,20))))
+#interestacional <- sis %>% 
+#  filter(str_detect(string = temporada_estacional, pattern = 'Interestacional'), ORIGEN == 'USMI') %>% 
+#  mutate(semana = factor(semana, levels = seq(21,39)))
+
+casxtem <- estacional %>%
+  filter(ORIGEN == 'USMI', CLASFLU == 'CONF LAB' & RESDEFIN %in% c('A H1',
+                                                                   'A H3',
+                                                                   'B',
+                                                                   'INF A',
+                                                                   'INF AH1N1 PMD',
+                                                                   'NO SUBTIPIFICADO')) %>% 
+  bind_rows(estacional %>%
+  filter(ORIGEN == 'USMI', CLASFLU == 'CONF LAB' & RESDEFIN2 %in% c('A H1',
+                                                                   'A H3',
+                                                                   'B',
+                                                                   'INF A',
+                                                                   'INF AH1N1 PMD',
+                                                                   'NO SUBTIPIFICADO')) %>% 
+    mutate(RESDEFIN = RESDEFIN2)
+  ) %>% 
+  count(temporada, flu = RESDEFIN) %>% 
+  pivot_wider(values_from = n, names_from = flu, values_fill = 0) %>% 
+  mutate(Total = `A H1` + 
+           `A H3` + B + `INF A` + `INF AH1N1 PMD`  #+ `Sin resultado` +`NO SUBTIPIFICADO`  
+         )
+
+
+defxtem <- estacional %>%
+  filter(ORIGEN == 'USMI', EVOLUCI == 'DEFUNCION', CLASFLU == 'CONF LAB' & RESDEFIN %in% c('A H1',
+                                                                   'A H3',
+                                                                   'B',
+                                                                   'INF A',
+                                                                   'INF AH1N1 PMD',
+                                                                   'NO SUBTIPIFICADO')) %>% 
+  bind_rows(
+    estacional %>%
+  filter(ORIGEN == 'USMI', EVOLUCI == 'DEFUNCION', CLASFLU == 'CONF LAB' & RESDEFIN2 %in% c('A H1',
+                                                                   'A H3',
+                                                                   'B',
+                                                                   'INF A',
+                                                                   'INF AH1N1 PMD',
+                                                                   'NO SUBTIPIFICADO')) %>% 
+    mutate(RESDEFIN = RESDEFIN2)
+  ) %>% 
+  count(temporadad, flu = RESDEFIN) %>% 
+  pivot_wider(values_from = n, names_from = flu, values_fill = 0) %>% 
+  mutate(Total = `A H3` + 
+           B  + `INF AH1N1 PMD` #+ `INF A` #`NO SUBTIPIFICADO` 
+         ) %>% 
+  rename(Defunciones = Total, 
+         #`Def INF A` = `INF A`, 
+         `Def A H3` = `A H3`,
+         `Def B` = B,
+         #`Def INF A` = `INF A`,
+         `Def INF AH1N1 PMD` = `INF AH1N1 PMD`, #,
+         #`Def NO SUBTIPIFICADO` = `NO SUBTIPIFICADO`
+         temporada = temporadad)
+
+casdef <- left_join(casxtem, defxtem)
+casdef[is.na(casdef)] = 0 
+casdef %>% 
+  openxlsx::write.xlsx("datos/SISVER/NUEVO/flucasos.xlsx", overwrite = T)
+
+#estacional %>%
+ # filter(ORIGEN == 'USMI', CLASFLU == 'CONF LAB' | RESDEFIN %in% c('A H1',
+  #                                                                 'A H3',
+   #                                                                'B',
+    #                                                               'INF A',
+     #                                                              'INF AH1N1 PMD',
+      #                                                             'NO SUBTIPIFICADO') | RESDEFIN2 %in% c('A H1',
+       #                                                            'A H3',
+        #                                                           'B',
+         #                                                          'INF A',
+          #                                                         'INF AH1N1 PMD',
+           #                                                        'NO SUBTIPIFICADO')) %>% 
+  #count(week, temporada) %>% 
+  #pivot_wider(values_from = n, names_from = temporada, values_fill = 0) #%>% 
+  ##mutate(week = factor(week, levels = c(seq(40,52), seq(1,20)))) %>% 
+  ##arrange(week)
+
+
+sisver %>%
+  filter(ENTIDAD == 'SONORA', season == 'estacional', ORIGEN == 'USMI', CLASFLU %in% c('CONF LAB', 'NEGATIVO') & RESDEFIN %in% c('A H1',
+                                                                   'A H3',
+                                                                   'B',
+                                                                   'INF A',
+                                                                   'INF AH1N1 PMD',
+                                                                   'NO SUBTIPIFICADO', 'NEGATIVO')) %>% 
+  bind_rows(
+  sisver %>%
+  filter(ENTIDAD == 'SONORA', season == 'estacional', ORIGEN == 'USMI', CLASFLU %in% c('CONF LAB', 'NEGATIVO') & RESDEFIN2 %in% c('A H1',
+                                                                   'A H3',
+                                                                   'B',
+                                                                   'INF A',
+                                                                   'INF AH1N1 PMD',
+                                                                   'NO SUBTIPIFICADO', 'NEGATIVO')) 
+  ) %>% 
+  mutate(POSITIVIDAD = case_when(
+    CLASFLU == 'CONF LAB' ~ 'POSITIVO',
+    RESDEFIN %in% c('A H1', 'A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO') ~ 'POSITIVO',
+    RESDEFIN2 %in% c('A H1', 'A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO') ~ 'POSITIVO',
+    T ~ 'NEGATIVO'
+  )) %>% 
+  count(week, temporada, POSITIVIDAD) %>% 
+  pivot_wider(values_from = n, names_from = c(POSITIVIDAD, temporada), values_fill = 0) %>% 
+  left_join(tibble(week = NA, 
+                   `POSITIVO_2020-2021` = NA,
+                   `POSITIVO_2024-2025` = NA)) %>% 
+  filter(!is.na(week)) %>% replace(is.na(.),0) %>% 
+  mutate(`p_2009-2010` = round(`POSITIVO_2009-2010`/(`POSITIVO_2009-2010` + `NEGATIVO_2009-2010`)*100, 1),
+         `p_2010-2011` = round(`POSITIVO_2010-2011`/(`POSITIVO_2010-2011` + `NEGATIVO_2010-2011`)*100, 1),
+         `p_2011-2012` = round(`POSITIVO_2011-2012`/(`POSITIVO_2011-2012` + `NEGATIVO_2011-2012`)*100, 1),
+         `p_2012-2013` = round(`POSITIVO_2012-2013`/(`POSITIVO_2012-2013` + `NEGATIVO_2012-2013`)*100, 1),
+         `p_2013-2014` = round(`POSITIVO_2013-2014`/(`POSITIVO_2013-2014` + `NEGATIVO_2013-2014`)*100, 1),
+         `p_2014-2015` = round(`POSITIVO_2014-2015`/(`POSITIVO_2014-2015` + `NEGATIVO_2014-2015`)*100, 1),
+         `p_2015-2016` = round(`POSITIVO_2015-2016`/(`POSITIVO_2015-2016` + `NEGATIVO_2015-2016`)*100, 1),
+         `p_2016-2017` = round(`POSITIVO_2016-2017`/(`POSITIVO_2016-2017` + `NEGATIVO_2016-2017`)*100, 1),
+         `p_2017-2018` = round(`POSITIVO_2017-2018`/(`POSITIVO_2017-2018` + `NEGATIVO_2017-2018`)*100, 1),
+         `p_2018-2019` = round(`POSITIVO_2018-2019`/(`POSITIVO_2018-2019` + `NEGATIVO_2018-2019`)*100, 1),
+         `p_2019-2020` = round(`POSITIVO_2019-2020`/(`POSITIVO_2019-2020` + `NEGATIVO_2019-2020`)*100, 1),
+         `p_2020-2021` = round(`POSITIVO_2020-2021`/(`POSITIVO_2020-2021` + `NEGATIVO_2020-2021`)*100, 1),
+         `p_2021-2022` = round(`POSITIVO_2021-2022`/(`POSITIVO_2021-2022` + `NEGATIVO_2021-2022`)*100, 1),
+         `p_2022-2023` = round(`POSITIVO_2022-2023`/(`POSITIVO_2022-2023` + `NEGATIVO_2022-2023`)*100, 1),
+         `p_2023-2024` = round(`POSITIVO_2023-2024`/(`POSITIVO_2023-2024` + `NEGATIVO_2023-2024`)*100, 1),
+         `p_2024-2025` = round(`POSITIVO_2024-2025`/(`POSITIVO_2024-2025` + `NEGATIVO_2024-2025`)*100, 1)) %>% 
+         
+       
+  openxlsx::write.xlsx("datos/SISVER/NUEVO/positividadflu.xlsx", overwrite = T)
+
+
+
+
+
+
+estacional %>%
+  filter(temporada == actual,
+         ORIGEN == 'USMI', CLASFLU == 'CONF LAB' & RESDEFIN %in% c('A H1',
+                                                                   'A H3',
+                                                                   'B',
+                                                                   'INF A',
+                                                                   'INF AH1N1 PMD',
+                                                                   'NO SUBTIPIFICADO')) %>% 
+  bind_rows(
+  estacional %>%
+  filter(temporada == actual,
+         ORIGEN == 'USMI', CLASFLU == 'CONF LAB' & RESDEFIN2 %in% c('A H1',
+                                                                   'A H3',
+                                                                   'B',
+                                                                   'INF A',
+                                                                   'INF AH1N1 PMD',
+                                                                   'NO SUBTIPIFICADO'))  
+  ) %>% 
+  mutate(GPO_EDAD = cut(EDAD, 
+                        breaks = c(0,5,14,24,44,59,Inf),
+                        labels = c('0 - 5', '6 - 14', '15 - 24', '25 - 44','45 - 59', '60 y más'),
+                        include.lowest = T)) %>%
+  mutate(GPO_EDAD = fct(as.character(GPO_EDAD), levels = c('0 - 5', '6 - 14', '15 - 24', '25 - 44','45 - 59', '60 y más'))) %>% 
+  count(GPO_EDAD, SEXO) %>% 
+  pivot_wider(values_from = n, names_from = SEXO, values_fill = 0) %>%
+  full_join(tibble(GPO_EDAD = factor(NA, levels = c('0 - 5', '6 - 14', '15 - 24', '25 - 44','45 - 59', '60 y más')), FEMENINO = 0, MASCULINO = 0)) %>% 
+  rename(Mujer = FEMENINO, Hombre = MASCULINO) %>% 
+  full_join(
+    tibble(GPO_EDAD = factor(NA, levels = c('0 - 5', '6 - 14', '15 - 24', '25 - 44','45 - 59', '60 y más')))) %>%
+  filter(!is.na(GPO_EDAD)) %>% 
+  replace(is.na(.), 0) %>%
+  arrange(GPO_EDAD) %>% select(GPO_EDAD, Mujer, Hombre) %>% 
+  openxlsx::write.xlsx("datos/SISVER/NUEVO/edad_flu.xlsx", overwrite = T)
+
+
+
+
+
+tabla2 <- estacional %>%
+  filter(temporada == actual, 
+         ORIGEN == 'USMI', CLASFLU == 'CONF LAB' & RESDEFIN %in% c('A H1',
+                                                                   'A H3',
+                                                                   'B',
+                                                                   'INF A',
+                                                                   'INF AH1N1 PMD',
+                                                                   'NO SUBTIPIFICADO')) %>% 
+  bind_rows(
+    estacional %>%
+  filter(temporada == actual, 
+         ORIGEN == 'USMI', CLASFLU == 'CONF LAB' & RESDEFIN2 %in% c('A H1',
+                                                                   'A H3',
+                                                                   'B',
+                                                                   'INF A',
+                                                                   'INF AH1N1 PMD',
+                                                                   'NO SUBTIPIFICADO'))
+  ) %>% 
+  mutate(MPIORESI = stri_trans_general(str = MPIORESI, id = "Latin-ASCII")) %>% 
+  count(MPIORESI) %>% 
+  rename(Casos = n) %>% 
+  left_join(
+    estacional %>%
+  filter(temporada == actual, EVOLUCI == 'DEFUNCION',
+         ORIGEN == 'USMI', CLASFLU == 'CONF LAB' & RESDEFIN %in% c('A H1',
+                                                                   'A H3',
+                                                                   'B',
+                                                                   'INF A',
+                                                                   'INF AH1N1 PMD',
+                                                                   'NO SUBTIPIFICADO')) %>%
+    bind_rows(
+    estacional %>%
+  filter(temporada == actual, EVOLUCI == 'DEFUNCION',
+         ORIGEN == 'USMI', CLASFLU == 'CONF LAB' & RESDEFIN2 %in% c('A H1',
+                                                                   'A H3',
+                                                                   'B',
+                                                                   'INF A',
+                                                                   'INF AH1N1 PMD',
+                                                                   'NO SUBTIPIFICADO'))  
+    ) %>% 
+    mutate(MPIORESI = stri_trans_general(str = MPIORESI, id = "Latin-ASCII")) %>%
+      count(MPIORESI) %>% 
+      rename(Defunciones = n)
+  ) %>% 
+  rename(Municipio = MPIORESI) %>% 
+  left_join(poblaciones %>% 
+              rename(Municipio = MUN) %>% 
+              mutate(Municipio = stri_trans_general(str = Municipio, id = "Latin-ASCII"))
+            ) %>% 
+  mutate(Defunciones = ifelse(is.na(Defunciones), 0, Defunciones)) %>% 
+  mutate(IA = round(Casos/poblacion*100000, 1),
+         letalidad = round(Defunciones/Casos*100, 1)) 
+tabla3 <- tabla2 %>% rbind(
+tibble(Municipio = 'Total', Casos = sum(tabla2$Casos, na.rm = T), Defunciones = sum(tabla2$Defunciones, na.rm = T), poblacion = sum(poblaciones$poblacion, na.rm = T),
+       IA = round(sum(tabla2$Casos, na.rm = T)/sum(poblaciones$poblacion, na.rm = T)*100000, 1),
+       letalidad = round(sum(tabla2$Defunciones, na.rm = T)/sum(tabla2$Casos, na.rm = T)*100,1))
+)
+tabla3 %>% 
+  openxlsx::write.xlsx("datos/SISVER/NUEVO/municipios_flu.xlsx", overwrite = T)
+estacional %>% 
+  filter(temporada == '2024-2025', CLASFLU == 'CONF LAB' & RESDEFIN %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO')) %>% 
+  bind_rows(
+   estacional %>% 
+  filter(temporada == '2024-2025', CLASFLU == 'CONF LAB' & RESDEFIN2 %in% c('A H1','A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO')) 
+  ) %>% 
+  openxlsx::write.xlsx("datos/SISVER/NUEVO/nominal_temp_flu.xlsx", overwrite = T)
+
+
+
+
+anterior <- paste('datos/SISVER/epi_', format(floor_date(floor_date(Sys.Date(), 'week') - 1, 'week', + 1), '%d%m%y'), '.txt', sep = '')
+#anterior <- paste('epi_270125.txt', sep = '')
+sisver_ant <- read_delim(anterior, delim = '|', locale = locale(encoding = 'latin1'), comment = '', quote = '') %>% mutate(CERTIDEF = as.character(CERTIDEF)) %>% 
+  bind_rows(read_delim('datos/SISVER/epi_2023.txt', delim = '|', locale = locale(encoding = 'latin1'), comment = '', quote = '') %>% mutate(CERTIDEF = as.character(CERTIDEF))
+) %>% 
+  filter(ENTRESI == 'SONORA', ENTIDAD == 'SONORA') %>% 
+ mutate(
+    FECHREG = as.Date.character(FECHREG, '%d/%m/%Y'),
+    FECDEF = as.Date.character(FECDEF, '%d/%m/%Y'),
+    FECNACI = as.Date.character(FECNACI, '%d/%m/%Y'),
+    FECINGRE = as.Date.character(FECINGRE, '%d/%m/%Y'),
+    FECINISI = as.Date.character(FECINISI, '%d/%m/%Y'),
+    FECINITXANTIVI = as.Date.character(FECINITXANTIVI, '%d/%m/%Y'),
+    FECVAEST = as.Date.character(FECVAEST, '%d/%m/%Y'),
+    FECMUEANT = as.Date.character(FECMUEANT, '%d/%m/%Y'),
+    FEC_VAC_COV = as.Date.character(FEC_VAC_COV, '%d/%m/%Y'),
+    FEC_REF_VAC_COV = as.Date.character(FEC_REF_VAC_COV, '%d/%m/%Y'),
+    CLASFLU = case_when(
+      RESDEFIN %in% c('A H1', 'A H3', 'B', 'INF A', 'INF AH1N1 PMD', 'NO SUBTIPIFICADO') ~ 'CONF LAB',
+      RESDEFIN2 %in% c('INF AH1N1 PMD') ~ 'CONF LAB',
+      RESDEFIN == 'NEGATIVO' ~ 'NEGATIVO',
+      T ~ CLASFLU
+    ),
+    CLASVSR = case_when(
+      RESDEFIN == 'VSR' ~ 'CONF LAB',
+      RESDEFIN2 == 'VSR' ~ 'CONF LAB',
+      RESDEFIN == 'NEGATIVO' ~ 'NEGATIVO',
+      T ~ CLASVSR
+    )
+  ) %>% 
+  mutate(temporada = case_when(
+    epiweek(FECINISI) %in% seq(40, 53) ~ paste(year(floor_date(FECINISI, 'week') + 3), '-', year(floor_date(FECINISI, 'week') + 3) + 1, sep = ''),
+    epiweek(FECINISI) %in% seq(1, 20)  ~ paste(year(floor_date(FECINISI, 'week') + 3) - 1, '-', year(floor_date(FECINISI, 'week') + 3), sep = ''),
+    epiweek(FECINISI) %in% seq(21, 39) ~ paste('Interestacional ', year(floor_date(FECINISI, 'week') + 3), sep = '')),
+    temporadad = case_when(
+      epiweek(FECDEF) %in% seq(40, 53) ~ paste(year(floor_date(FECDEF, 'week') + 3), '-', year(floor_date(FECDEF, 'week') + 3) + 1, sep = ''),
+      epiweek(FECDEF) %in% seq(1, 20)  ~ paste(year(floor_date(FECDEF, 'week') + 3) - 1, '-', year(floor_date(FECDEF, 'week') + 3), sep = ''),
+      epiweek(FECDEF) %in% seq(21, 39) ~ paste('Interestacional ', year(floor_date(FECDEF, 'week') + 3), sep = '')),
+    temporadar = case_when(
+      epiweek(FECHREG) %in% seq(40, 53) ~ paste(year(floor_date(FECHREG, 'week') + 3), '-', year(floor_date(FECHREG, 'week') + 3) + 1, sep = ''),
+      epiweek(FECHREG) %in% seq(1, 20)  ~ paste(year(floor_date(FECHREG, 'week') + 3) - 1, '-', year(floor_date(FECHREG, 'week') + 3), sep = ''),
+      epiweek(FECHREG) %in% seq(21, 39) ~ paste('Interestacional ', year(floor_date(FECHREG, 'week') + 3), sep = '')),
+    season = case_when(
+    epiweek(FECINISI) %in% seq(40, 53) ~ paste('estacional'),
+    epiweek(FECINISI) %in% seq(1, 20)  ~ paste('estacional'),
+    epiweek(FECINISI) %in% seq(21, 39) ~ paste('interestacional')),
+    week = factor(epiweek(FECINISI), levels = c(seq(40,53), seq(1,20), seq(21,39))),
+    weekd = factor(epiweek(FECDEF), levels = c(seq(40,53), seq(1,20), seq(21,39))),
+    #week = epiweek(floor_date(dmy(FECINISI), 'week')),
+    #weekd = epiweek(floor_date(dmy(FECDEF), 'week')),
+    year = year(floor_date(FECINISI, 'week') + 3),
+    yeard = year(floor_date(FECDEF, 'week') + 3)
+  ) %>%
+  mutate(semana = paste(year, '-', str_pad(week, width = 2, side = 'left', pad = '0'), sep = ''),
+         semanad = paste(yeard, '-', str_pad(weekd, width = 2, side = 'left', pad = '0'), sep = '')) 
+
+
+
+
+ccant <- sisver_ant %>% 
+  filter(ORIGEN == 'USMI', CLASCOVID19 == 'CONF LAB') %>% 
+  dplyr::select(`FOLIO SINAVE`)
+CC %>% 
+  filter(temporada == actual) %>% 
+  openxlsx::write.xlsx("datos/SISVER/NUEVO/nominal_covid.xlsx", overwrite = T)
+CC %>% 
+  filter(!`FOLIO SINAVE` %in% ccant$`FOLIO SINAVE`) %>% 
+  openxlsx::write.xlsx("datos/SISVER/NUEVO/SE_covid.xlsx", overwrite = T)
+
+CC_f <- estacional %>%
+  filter(temporada == actual, ORIGEN == 'USMI', CLASFLU == 'CONF LAB' & RESDEFIN %in% c('A H1',
+                                                                    'A H3',
+                                                                    'B',
+                                                                    'INF A',
+                                                                    'INF AH1N1 PMD',
+                                                                    'NO SUBTIPIFICADO')) %>% 
+  bind_rows(
+  estacional %>%
+  filter(temporada == actual, ORIGEN == 'USMI', CLASFLU == 'CONF LAB' & RESDEFIN2 %in% c('A H1',
+                                                                    'A H3',
+                                                                    'B',
+                                                                    'INF A',
+                                                                    'INF AH1N1 PMD',
+                                                                    'NO SUBTIPIFICADO'))  
+  )  
+cc_ant <- sisver_ant %>% 
+  filter(ORIGEN == 'USMI', CLASFLU == 'CONF LAB' & RESDEFIN %in% c('A H1',
+                                                                    'A H3',
+                                                                    'B',
+                                                                    'INF A',
+                                                                    'INF AH1N1 PMD',
+                                                                    'NO SUBTIPIFICADO')) %>% 
+  bind_rows(
+    sisver_ant %>% 
+  filter(ORIGEN == 'USMI', CLASFLU == 'CONF LAB' & RESDEFIN2 %in% c('A H1',
+                                                                    'A H3',
+                                                                    'B',
+                                                                    'INF A',
+                                                                    'INF AH1N1 PMD',
+                                                                    'NO SUBTIPIFICADO'))
+  ) %>% 
+  dplyr::select(`FOLIO SINAVE`)
+CC_f %>% 
+  filter(!`FOLIO SINAVE` %in% cc_ant$`FOLIO SINAVE`) %>% 
+  openxlsx::write.xlsx("datos/SISVER/NUEVO/SE_flu.xlsx", overwrite = T)
+
+```
+
+
+## Otras 
+
+```{r, echo=FALSE, message=F, warning=F}
+estacional %>% 
+  filter(temporada == actual, ORIGEN == 'USMI', !RESDEFIN %in% c('SARS-CoV-2',
+                                            'RECHAZADA',
+                                            'NO ADECUADO', 
+                                            'NEGATIVO',
+                                            'INF AH1N1 PMD',
+                                            'B',
+                                            'A H3',
+                                            'INF A',
+                                            'A H1'),  !is.na(RESDEFIN)) %>%
+  bind_rows(
+   estacional %>% 
+  filter(temporada == actual, ORIGEN == 'USMI', !RESDEFIN2 %in% c('SARS-CoV-2',
+                                            'RECHAZADA',
+                                            'NO ADECUADO', 
+                                            'NEGATIVO',
+                                            'INF AH1N1 PMD',
+                                            'B',
+                                            'A H3',
+                                            'INF A',
+                                            'A H1'),  !is.na(RESDEFIN2))
+  ) %>%  #distinct(`ID_REGISTRO`, .keep_all = T) %>% 
+  openxlsx::write.xlsx('datos/SISVER/NUEVO/nominal_otr.xlsx', overwrite = T)
+
+
+#sisver %>% 
+#  filter(ORIGEN == 'USMI', !RESDEFIN %in% c('SARS-CoV-2',
+#                                            'RECHAZADA',
+#                                            'NO ADECUADO', 
+#                                            'NEGATIVO',
+#                                            'INF AH1N1 PMD',
+#                                            'B',
+#                                            'A H3'),  !is.na(RESDEFIN),
+#         temporada_estacional == c('2022 - 2023'), 
+#         dmy(FECINISI) <= dmy('21-01-2023')) %>% 
+#           count(EVOLUCI)
+
+
+cc_otr <- estacional %>% 
+  filter(temporada == actual, ORIGEN == 'USMI', !RESDEFIN %in% c('SARS-CoV-2',
+                                            'RECHAZADA',
+                                            'NO ADECUADO', 
+                                            'NEGATIVO',
+                                            'INF AH1N1 PMD',
+                                            'B',
+                                            'A H3',
+                                            'INF A',
+                                            'A H1'),  !is.na(RESDEFIN)) %>% 
+  bind_rows(
+    estacional %>% 
+  filter(temporada == actual, ORIGEN == 'USMI', !RESDEFIN2 %in% c('SARS-CoV-2',
+                                            'RECHAZADA',
+                                            'NO ADECUADO', 
+                                            'NEGATIVO',
+                                            'INF AH1N1 PMD',
+                                            'B',
+                                            'A H3',
+                                            'INF A',
+                                            'A H1'),  !is.na(RESDEFIN2)) 
+  ) #%>% distinct(`ID_REGISTRO`, .keep_all = T)
+
+ccant_otr <- sisver_ant %>% 
+  filter(ORIGEN == 'USMI', !RESDEFIN %in% c('SARS-CoV-2',
+                                            'RECHAZADA',
+                                            'NO ADECUADO', 
+                                            'NEGATIVO',
+                                            'INF AH1N1 PMD',
+                                            'B',
+                                            'A H3',
+                                            'INF A',
+                                            'A H1'),  !is.na(RESDEFIN)) %>% 
+   bind_rows(
+    sisver_ant %>% 
+  filter(ORIGEN == 'USMI', !RESDEFIN2 %in% c('SARS-CoV-2',
+                                            'RECHAZADA',
+                                            'NO ADECUADO', 
+                                            'NEGATIVO',
+                                            'INF AH1N1 PMD',
+                                            'B',
+                                            'A H3',
+                                            'INF A',
+                                            'A H1'),  !is.na(RESDEFIN2)) 
+  ) #%>% distinct(`ID_REGISTRO`, .keep_all = T)
+
+cc_otr %>% 
+  filter(!`FOLIO SINAVE` %in% ccant_otr$`FOLIO SINAVE`) %>% 
+  openxlsx::write.xlsx('datos/SISVER/NUEVO/SE_otr.xlsx', overwrite = T)
+
+estacional %>% 
+  filter(ORIGEN == 'USMI', !RESDEFIN %in% c('SARS-CoV-2',
+                                            'RECHAZADA',
+                                            'NO ADECUADO', 
+                                            'NEGATIVO',
+                                            'INF AH1N1 PMD',
+                                            'B',
+                                            'A H3',
+                                            'INF A',
+                                            'A H1'),  !is.na(RESDEFIN),
+        temporada == actual) %>% 
+  bind_rows(
+    estacional %>% 
+  filter(ORIGEN == 'USMI', !RESDEFIN2 %in% c('SARS-CoV-2',
+                                            'RECHAZADA',
+                                            'NO ADECUADO', 
+                                            'NEGATIVO',
+                                            'INF AH1N1 PMD',
+                                            'B',
+                                            'A H3',
+                                            'INF A',
+                                            'A H1'),  !is.na(RESDEFIN2),
+         temporada == actual) %>%
+  mutate(RESDEFIN = case_when(
+    RESDEFIN2 %in% c('NEGATIVO', 'NO ADECUADO', 'RECHAZADA') ~ 'NEGATIVO/NO ADECUADO/RECHAZADA',
+    is.na(RESDEFIN2) ~ 'SIN RESULTADO',
+    T ~ RESDEFIN2)
+    )
+  ) %>% #distinct(`ID_REGISTRO`, .keep_all = T) %>% 
+  count(TIPACIEN) %>%
+  mutate(Porcentaje = round(n/sum(n, na.rm = T)*100, 1), 
+         TIPACIEN = str_to_sentence(TIPACIEN)) %>%
+  rename(Casos = n, Paciente = TIPACIEN) %>% 
+  openxlsx::write.xlsx('datos/SISVER/NUEVO/otr_hospitalizados.xlsx', overwrite = T)
+#  janitor::adorn_totals(where = 'row')
+
+
+
+estacional %>% 
+  filter(ORIGEN == 'USMI', temporada == actual, ENTIDAD == 'SONORA') %>% 
+  mutate(RESDEFIN = case_when(
+    RESDEFIN %in% c('RECHAZADA', 'NEGATIVO', 'NO ADECUADO') ~ 'RECHAZADA/NEGATIVO/NO ADECUADO',
+    T ~ RESDEFIN),
+    RESDEFIN2 = case_when(
+    RESDEFIN2 %in% c('RECHAZADA', 'NEGATIVO', 'NO ADECUADO') ~ 'RECHAZADA/NEGATIVO/NO ADECUADO',
+    T ~ RESDEFIN2)
+  ) %>% 
+  count(RESDEFIN, RESDEFIN2) %>%
+  pivot_longer(cols = RESDEFIN:RESDEFIN2) %>%
+  filter(!is.na(value)) %>%
+  group_by(value) %>%
+  summarise(Casos = sum(n)) %>% 
+  #filter(!value == 'INF A') %>%
+  mutate(Porcentaje = round(Casos/sum(Casos, na.rm = T)*100, 2)) %>% 
+  rename(Virus = value) %>% 
+ #arrange(desc(Casos)) %>%
+  openxlsx::write.xlsx('datos/SISVER/NUEVO/otr_virus.xlsx', overwrite = T)
+
+
+
+#estacional %>% filter(temporada == actual) %>% 
+#mutate(RESDEF = paste(RESDEFIN,'/',RESDEFIN2)) %>% 
+ # mutate(RESDEF = str_remove_all(RESDEF, pattern = ' / NA')) %>% 
+  #count(RESDEF) %>% 
+  #rename(Casos = n, Virus = RESDEF) %>% openxlsx::write.xlsx('NUEVO/otr_virus2.xlsx', overwrite = T)
+
+  
+estacional %>% 
+  filter(ORIGEN == 'USMI', EVOLUCI == 'DEFUNCION') %>%
+  mutate(RESDEFIN = case_when(
+    RESDEFIN %in% c('NEGATIVO', 'NO ADECUADO', 'RECHAZADA') ~ 'NEGATIVO/NO ADECUADO/RECHAZADA',
+    is.na(RESDEFIN) ~ 'SIN RESULTADO',
+    T ~ RESDEFIN
+  )) %>% 
+  bind_rows(
+    estacional %>% 
+  filter(ORIGEN == 'USMI', EVOLUCI == 'DEFUNCION') %>%
+  mutate(RESDEFIN2 = case_when(
+    RESDEFIN2 %in% c('NEGATIVO', 'NO ADECUADO', 'RECHAZADA') ~ NA,
+   # is.na(RESDEFIN2) ~ 'SIN RESULTADO',
+    T ~ RESDEFIN2
+  )) %>% mutate(RESDEFIN = RESDEFIN2)
+  ) %>% 
+  filter(temporadad == actual, !is.na(RESDEFIN)) %>% 
+  count(Laboratorio = RESDEFIN) %>% 
+  arrange(desc(n)) %>% 
+  rename(Defunciones = n) %>% 
+  openxlsx::write.xlsx('datos/SISVER/NUEVO/otr_def_virus.xlsx', overwrite = T)
+
+
+
+
+#estacional %>% 
+ # filter(ORIGEN == 'USMI', temporada == actual) %>%
+  #mutate(RESDEFIN = case_when(
+   # RESDEFIN %in% c('NEGATIVO', 'NO ADECUADO', 'RECHAZADA') ~ 'NEGATIVO/NO ADECUADO/RECHAZADA',
+    #is.na(RESDEFIN) ~ 'SIN RESULTADO',
+    #T ~ RESDEFIN
+  #)) %>% 
+  #filter(!RESDEFIN %in% c('NEGATIVO/NO ADECUADO/RECHAZADA', 'SIN RESULTADO')) %>% 
+  #count(semana, Laboratorio = RESDEFIN) %>% 
+  #pivot_wider(values_from = n, names_from = Laboratorio, values_fill = 0) %>% 
+  #openxlsx::write.xlsx('NUEVO/otr_graficavir.xlsx', overwrite = T)
+
+#Se está contando las veces que se reportó el virus, no necesariamente el número de casos(una misma persona puede tener diferentes virus)
+estacional %>% 
+  filter(ORIGEN == 'USMI', temporada == actual) %>%
+  mutate(RESDEFIN = case_when(
+    RESDEFIN %in% c('NEGATIVO', 'NO ADECUADO', 'RECHAZADA') ~ 'NEGATIVO/NO ADECUADO/RECHAZADA',
+    is.na(RESDEFIN) ~ 'SIN RESULTADO',
+    T ~ RESDEFIN
+  )) %>% 
+  bind_rows(
+    estacional %>% 
+  filter(ORIGEN == 'USMI', temporada == actual) %>%
+  mutate(RESDEFIN = case_when(
+    RESDEFIN2 %in% c('NEGATIVO', 'NO ADECUADO', 'RECHAZADA') ~ 'NEGATIVO/NO ADECUADO/RECHAZADA',
+    is.na(RESDEFIN2) ~ 'SIN RESULTADO',
+    T ~ RESDEFIN2
+  ))
+  ) %>% 
+  filter(!RESDEFIN %in% c('NEGATIVO/NO ADECUADO/RECHAZADA', 'SIN RESULTADO')) %>% 
+  count(semana, Laboratorio = RESDEFIN) %>% 
+  pivot_wider(values_from = n, names_from = Laboratorio, values_fill = 0) %>% 
+  openxlsx::write.xlsx('datos/SISVER/NUEVO/otr_graficavir.xlsx', overwrite = T)
+  
+  
+  estacional %>% 
+  filter(temporada == actual) %>%
+  mutate(RESDEFIN = case_when(
+    RESDEFIN %in% c('NEGATIVO', 'NO ADECUADO', 'RECHAZADA') ~ 'NEGATIVO/NO ADECUADO/RECHAZADA',
+    is.na(RESDEFIN) ~ 'SIN RESULTADO',
+    T ~ RESDEFIN
+  )) %>% 
+  bind_rows(
+    estacional %>% 
+  filter(temporada == actual) %>%
+  mutate(RESDEFIN = case_when(
+    RESDEFIN2 %in% c('NEGATIVO', 'NO ADECUADO', 'RECHAZADA') ~ 'NEGATIVO/NO ADECUADO/RECHAZADA',
+    is.na(RESDEFIN2) ~ 'SIN RESULTADO',
+    T ~ RESDEFIN2
+  ))
+  ) %>% 
+  filter(!RESDEFIN %in% c('NEGATIVO/NO ADECUADO/RECHAZADA', 'SIN RESULTADO')) %>% 
+    #distinct(`ID_REGISTRO`, .keep_all = T) %>% 
+    mutate(GPO_EDAD = cut(EDAD, 
+                       breaks = c(0,5,14,24,44,59,Inf),
+                       labels = c('0 - 5', '6 - 14', '15 - 24', '25 - 44','45 - 59', '60 y más'),
+                       include.lowest = T)) %>%
+  mutate(GPO_EDAD = fct(as.character(GPO_EDAD), levels = c('0 - 5', '6 - 14', '15 - 24', '25 - 44','45 - 59', '60 y más'))) %>% 
+  count(GPO_EDAD, RESDEFIN) %>% 
+  pivot_wider(values_from = n, names_from = RESDEFIN, values_fill = 0) %>% 
+  openxlsx::write.xlsx('datos/SISVER/NUEVO/otr_edadvir.xlsx', overwrite = T)
+
+
+estacional %>% 
+  filter(ORIGEN == 'USMI') %>%
+  mutate(RESDEFIN = case_when(
+    RESDEFIN %in% c('NEGATIVO', 'NO ADECUADO', 'RECHAZADA') ~ 'NEGATIVO/NO ADECUADO/RECHAZADA',
+    is.na(RESDEFIN) ~ 'SIN RESULTADO',
+    T ~ RESDEFIN
+  )) %>% bind_rows(
+   estacional %>% 
+  filter(ORIGEN == 'USMI') %>%
+  mutate(RESDEFIN = case_when(
+    RESDEFIN2 %in% c('NEGATIVO', 'NO ADECUADO', 'RECHAZADA') ~ 'NEGATIVO/NO ADECUADO/RECHAZADA',
+    is.na(RESDEFIN2) ~ 'SIN RESULTADO',
+    T ~ RESDEFIN2
+  ))  
+  ) %>% 
+  filter(!RESDEFIN %in% c('NEGATIVO/NO ADECUADO/RECHAZADA', 'SIN RESULTADO'), 
+         epiweek(FECINISI) == epiweek(Sys.Date()) - 1,
+         year(FECINISI) == year(Sys.Date())) %>% 
+  count(RESDEFIN, semana) %>% 
+  arrange(desc(n)) %>% 
+  rename(Casos = n) %>% openxlsx::write.xlsx('datos/SISVER/NUEVO/otr_semana.xlsx', overwrite = T)
+
+
+x <- estacional %>% 
+  filter(ORIGEN == 'USMI', !RESDEFIN %in% c('SARS-CoV-2',
+                                            'RECHAZADA',
+                                            'NO ADECUADO', 
+                                            'NEGATIVO',
+                                            'INF AH1N1 PMD',
+                                            'B',
+                                            'A H3',
+                                            'INF A',
+                                            'A H1'),  !is.na(RESDEFIN),
+         temporada == actual) %>%
+  mutate(RESDEFIN = case_when(
+    RESDEFIN %in% c('NEGATIVO', 'NO ADECUADO', 'RECHAZADA') ~ 'NEGATIVO/NO ADECUADO/RECHAZADA',
+    is.na(RESDEFIN) ~ 'SIN RESULTADO',
+    T ~ RESDEFIN
+  )) %>% 
+  bind_rows(
+    estacional %>% 
+  filter(ORIGEN == 'USMI', !RESDEFIN2 %in% c('SARS-CoV-2',
+                                            'RECHAZADA',
+                                            'NO ADECUADO', 
+                                            'NEGATIVO',
+                                            'INF AH1N1 PMD',
+                                            'B',
+                                            'A H3',
+                                            'INF A',
+                                            'A H1'),  !is.na(RESDEFIN2),
+         temporada == actual) %>%
+  mutate(RESDEFIN = case_when(
+    RESDEFIN2 %in% c('NEGATIVO', 'NO ADECUADO', 'RECHAZADA') ~ 'NEGATIVO/NO ADECUADO/RECHAZADA',
+    is.na(RESDEFIN2) ~ 'SIN RESULTADO',
+    T ~ RESDEFIN2
+  ))
+  ) %>% #distinct(`ID_REGISTRO`, .keep_all = T) %>% 
+  mutate(CVEMUNI = parse_number(CVEMUNI)) %>% 
+  count(CVEMUNI, MPIORESI)
+  
+son <- st_read(dsn = '/Users/analisisyestadistica/mapa_dengue/data/muni_2018gw/muni_2018gw.shp', quiet = TRUE) %>%
+  filter(NOM_ENT == "Sonora") %>%
+  mutate(CVEMUNI = parse_number(CVE_MUN)) %>% 
+  mutate(MUN = stri_trans_general(str = str_to_upper(NOM_MUN, locale = 'en'), id = "Latin-ASCII")) %>%
+  st_transform(4326) %>% 
+  mutate(MUN = case_when(
+  MUN == 'PUERTO PENASCO' ~ 'PUERTO PEÑASCO',
+  T ~MUN))
+
+#poblaciones
+poblaciones <- openxlsx::read.xlsx('base_municipios_sonora.xlsx') %>%
+  filter(AÑO == year(Sys.Date())) %>% 
+  mutate(CLAVE = CLAVE - 26000) %>% 
+  group_by(CLAVE, MUN) %>%
+  summarise(poblacion = sum(POB, na.rm = T)) %>%
+  mutate(MUN = stri_trans_general(str = str_to_upper(MUN, locale = 'en'), id = "Latin-ASCII")) %>% 
+  mutate(MUN = case_when(
+    MUN == 'PUERTO PENASCO' ~ 'PUERTO PEÑASCO',
+    T ~ MUN
+  ))
+
+
+#xy <- full_join(poblaciones %>% rename(CVEMUNI = CLAVE), x) %>% 
+  #select(CVEMUNI, poblacion, n)
+x <- x %>% rename(MUN = MPIORESI)
+xy <- full_join(poblaciones %>% rename(CVEMUNI = CLAVE), x) %>% 
+  select(MUN, poblacion, n)
+
+
+son <-  full_join(son, xy)
+
+son <- son %>% 
+  mutate(IA = case_when(
+    !is.na(n) ~ round(n/poblacion*100000,1),
+    T ~ NA
+  )) 
+  
+son %>% 
+  as_tibble() %>% 
+  select(-geometry) %>% 
+  openxlsx::write.xlsx('datos/SISVER/NUEVO/otr_mun.xlsx', overwrite = T)
+
+
+
+
+  
+#pal <- colorBin(c("#CD946F","#EF7F1A", "#56070C"), son$IA, 
+#                bins = c(0,max(son$IA, na.rm = T)/3,max(son$IA, na.rm = T)/3*2,max(son$IA, na.rm = T)), 
+#                pretty = F, 
+#                na.color = "#a9a7a5")
+plabs <- c(0,round(max(son$IA, na.rm = T)/3, 1), round(max(son$IA, na.rm = T)/3*2, 1), round(max(son$IA, na.rm = T),1), 'Sin casos')
+
+pal <- colorBin(c("#CD946F","#EF7F1A", "#56070C"), son$IA, 
+                bins = c(0,summary(son$IA, na.rm = T)[3],summary(son$IA, na.rm = T)[5],summary(son$IA, na.rm = T)[6]), 
+                pretty = F, 
+                na.color = "#a9a7a5")
+plabs <- c(0,round(summary(son$IA, na.rm = T)[3], 1), round(summary(son$IA, na.rm = T)[5], 1), round(summary(son$IA, na.rm = T)[6],1), 'Sin casos')
+  
+  
+#  count(Laboratorio = RESDEFIN) %>% 
+#  arrange(desc(n)) %>% 
+#  mutate(Porcentaje = round(n/sum(n, na.rm = T)*100, 2)) %>% 
+#  rename(Casos = n) %>% 
+#  openxlsx::write.xlsx('NUEVO/otr_virus.xlsx', overwrite = T)
+
+
+```
+
+## MAPA  
+
+
+```{r, echo=FALSE, message=F, warning=F, eval=F}
+son <- st_read(dsn = "muni_2018gw.shp", quiet = TRUE) %>%
+  filter(NOM_ENT == "Sonora") %>%
+  mutate(MUN = stri_trans_general(str = str_to_upper(NOM_MUN, locale = 'en'), id = "Latin-ASCII")) %>%
+  st_transform(4326)
+
+sisver_ <- sisver %>%
+  filter(epiweek(floor_date(dmy(FECHREG), 'week')) >= 21, 
+         RESDEFIN %in% c('SARS-CoV-2', 'B',
+                         'VSR',
+                         'INF AH1N1 PMD',
+                         'A H3',
+                         'PARAINFLUENZA 2',
+                         'PARAINFLUENZA 3')) %>%
+  mutate(RESDEFIN = ifelse(!RESDEFIN %in% c('SARS-CoV-2', 'VSR'), 'Influenza', RESDEFIN)) %>% 
+  count(MPIORESI, RESDEFIN) %>%
+  pivot_wider(values_from = n, names_from = RESDEFIN, values_fill = 0) %>% 
+  rename(MUN = MPIORESI) %>%
+  left_join(poblaciones) %>%
+  left_join(tibble(MUN = NA, Influenza = NA, `SARS-CoV-2` = NA, VSR = NA)) %>% 
+  filter(!is.na(MUN)) %>% 
+  mutate(Influenza = ifelse(is.na(Influenza), 0, Influenza),
+         `SARS-CoV-2` = ifelse(is.na(`SARS-CoV-2`), 0, `SARS-CoV-2`),
+         VSR = ifelse(is.na(VSR), 0, VSR)) %>% 
+  mutate(IA_flu = round(Influenza/poblacion*100000,1),
+         IA_COVID = round(`SARS-CoV-2`/poblacion*100000,1),
+         IA_VSR = round(VSR/poblacion*100000,1)) %>%
+  mutate(IA = IA_flu + IA_COVID + IA_VSR) %>% 
+  arrange(desc(IA))
+  
+
+son <- full_join(son, sisver_)
+pal <- colorBin(c("#CD946F","#EF7F1A", "#56070C"), son$IA, 
+                bins = c(0,max(son$IA, na.rm = T)/3,max(son$IA, na.rm = T)/3*2,max(son$IA, na.rm = T)), 
+                pretty = F, 
+                na.color = "#a9a7a5")
+plabs <- c(0,round(max(son$IA, na.rm = T)/3, 1), round(max(son$IA, na.rm = T)/3*2, 1), round(max(son$IA, na.rm = T),1), 'Sin casos')
+
+leaflet() %>%
+  #  addPolygons(data = son, 
+  #              label = ~paste(NOM_MUN), 
+  #              group = "Mapa",
+  #              fillColor = "#a9a7a5", 
+  #              fillOpacity = 1, 
+  #              color = "black",
+  #              weight = 1) %>%
+  addPolygons(data = son, 
+              label = ~paste(NOM_MUN,
+                             ifelse(!is.na(IA), paste("incidencia de ",round(IA, digits = 1)," por 100,000 habs.", sep = ''),
+                                    paste("sin casos")), 
+                             sep = ", "), 
+              popup = ~paste('Incidencia por 100 000', 'COVID:', IA_COVID, 'Influenza', IA_flu, 'VSR', IA_VSR, sep = '<br>'), 
+              group = "Incidencia",
+              fillColor = ~pal(IA), 
+              fillOpacity = 1, 
+              weight = 1,               
+              color = "black",
+              labelOptions = labelOptions(style = list(textsize = "30px"))) %>%
+  addLegend("bottomleft", 
+            group = "Incidencia",
+            colors = c("#56070C",
+                       "#EF7F1A",
+                       "#CD946F",
+                       "#a9a7a5"),
+            labels= c(paste(as.numeric(plabs[3]) + 0.1,'-', plabs[4]),
+                      paste(as.numeric(plabs[2]) + 0.1,'-', plabs[3]),
+                      paste('0.1 -', plabs[2]),
+                      plabs[5]),
+            title = "Incidencia por 100,000 habs.") %>%
+  #  addLayersControl(baseGroups = "Mapa",
+  #                   overlayGroups = c("Incidencia"),
+  #                   options = layersControlOptions(collapsed = FALSE)) %>%
+  addScaleBar(position = "bottomright", options = scaleBarOptions(maxWidth = 200, metric = T, imperial = F)) %>%
+  #  addProviderTiles(providers$CartoDB.Positron) %>%
+  setView(-111.04834001095054, 29.72064764786741,zoom = 6) %>% 
+  setMapWidgetStyle(list(background= "white"))
+
+```
+
+```{r, echo=FALSE, message=F, warning=F, eval = F}
+# COVID-19 Datos Abiertos ----
+
+options(download.file.method="curl", download.file.extra="-k -L")
+temp <- tempfile()
+download.file('https://datosabiertos.salud.gob.mx/gobmx/salud/datos_abiertos/datos_abiertos_influenza_covid19.zip', temp)
+
+sisnac <- read_csv(unz(temp, 'COVID19MEXICO.csv')) %>% 
+  filter(ORIGEN == 1, FECHA_SINTOMAS >= dmy('29-09-2024'), RESULTADO_PCR == 34 | CLASIFICACION_FINAL_COVID == 3) 
+
+sisnac %>%
+  count(ENTIDAD_RES) %>% rename(CLAVE_ENT = ENTIDAD_RES) %>%
+  mutate(CLAVE_ENT = as.numeric(CLAVE_ENT)) %>% 
+  full_join(
+read_csv('00_Pob_Mitad_1950_2070.csv', locale = locale(encoding = 'UTF-8'), comment = '', quote = '') %>% 
+    filter(AÑO == as.numeric(format(Sys.Date(), '%Y')),
+           !ENTIDAD == "República Mexicana") %>% group_by(ENTIDAD, CVE_GEO) %>%
+  summarise(poblacion = sum(POBLACION, na.rm = T)) %>% 
+  rename(CLAVE_ENT = CVE_GEO, 
+         poblaciones = poblacion)
+) %>%
+  mutate(IA = round(n/poblaciones*100000, 1)) %>% 
+  rename(Casos = n,
+         NOM_ENT = ENTIDAD) %>% 
+  openxlsx::write.xlsx('datos/SISVER/NUEVO/covid_nacional.xlsx', overwrite = T)
+
+```
+
+```{r, echo=FALSE, message=F, warning=F, eval =F}
+# Federal FLU Informe semanal ----
+# Cargar las librerías necesarias
+library(httr)
+library(rvest)
+library(glue)
+
+# Obtener el contenido de la página
+
+rows <- pdftools::pdf_text(
+  read_html(
+    content(
+      GET(paste('https://www.gob.mx/salud/documentos/informes-semanales-para-la-vigilancia-epidemiologica-de-influenza-covid-19-y-otros-virus-respiratorios-', year(floor_date(Sys.Date(), 'week')-7), sep = '')), 
+      "text")
+    )  %>%
+    html_nodes("a[href$='.pdf']") %>%  # Selecciona enlaces que terminan en .pdf
+    html_attr("href") %>%              # Extrae el atributo href (la URL)
+    na.omit() %>% 
+    paste('https://www.gob.mx', ., sep = '') %>% 
+    head(1)
+)[15] %>% 
+  textConnection() %>% 
+  scan(what="character", sep = "\n")
+
+bol2 <- data.frame(ESTADO = NA, ETI_IRAG = NA, CASOS = NA, PORCENTAJE = NA, DEFUNCIONES = NA)
+
+for (i in 1:16) {
+  bol2[i,1] <- unlist(strsplit(rows[i+9],'  \\s+ '))[1]
+  bol2[i,2] <- unlist(strsplit(rows[i+9],'  \\s+ '))[2]
+  bol2[i,3] <- unlist(strsplit(rows[i+9],'  \\s+ '))[3]
+  bol2[i,4] <- unlist(strsplit(rows[i+9],'  \\s+ '))[4]
+  bol2[i,5] <- unlist(strsplit(rows[i+9],'  \\s+ '))[5]
+}
+
+for (i in 1:16) {
+  bol2[i+16,1] <- unlist(strsplit(rows[i+9],'  \\s+ '))[6]
+  bol2[i+16,2] <- unlist(strsplit(rows[i+9],'  \\s+ '))[7]
+  bol2[i+16,3] <- unlist(strsplit(rows[i+9],'  \\s+ '))[8]
+  bol2[i+16,4] <- unlist(strsplit(rows[i+9],'  \\s+ '))[9]
+  bol2[i+16,5] <- unlist(strsplit(rows[i+9],'  \\s+ '))[10]
+}
+
+bol2 <- bol2 %>% 
+  mutate(ETI_IRAG = parse_number(ETI_IRAG),
+         CASOS = parse_number(CASOS),
+         ESTADO = str_squish(ESTADO),
+         CLAVE_ENT = seq(1,32),
+         PORCENTAJE = parse_number(PORCENTAJE),
+         DEFUNCIONES = parse_number(DEFUNCIONES))
+
+
+estados <- read_csv('00_Pob_Mitad_1950_2070.csv', locale = locale(encoding = 'UTF-8'), comment = '', quote = '') %>% 
+    filter(AÑO == as.numeric(format(Sys.Date(), '%Y')),
+           !ENTIDAD == "República Mexicana") %>% group_by(CVE_GEO, ENTIDAD) %>%
+  summarise(poblacion = sum(POBLACION, na.rm = T)) %>% 
+  rename(CLAVE_ENT = CVE_GEO, 
+         NOM_ENT = ENTIDAD)
+nacional <- full_join(estados, bol2) %>%
+  mutate(IA = round(CASOS/poblacion * 100000, 1)) %>%
+  dplyr::select(ESTADO, CASOS, IA) %>%
+  arrange(desc(CASOS)) %>%
+  mutate(ESTADO = fct_inorder(ESTADO)) %>% 
+  select(-CLAVE_ENT)
+
+
+nacional %>% openxlsx::write.xlsx('datos/SISVER/NUEVO/nacional_FLU.xlsx', overwrite = T)
+
+```
