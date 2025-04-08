@@ -1,0 +1,938 @@
+---
+title: "FMRR"
+author: "Abraham Ocejo <br> Edileth Yocupicio"
+date: '`r Sys.Date()`'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(stringi)
+library(leaflet)
+library(leaflet.extras)
+library(sf)
+library(janitor)
+library(flextable)
+library(plotly)
+
+#fmrr_actual %>% filter(str_detect(DES_UNIDAD_TRATANTE, pattern = 'JURISD|CAPA|UNEME')) %>% count(DES_UNIDAD_TRATANTE)
+
+if (Sys.Date() == floor_date(Sys.Date(), 'week') + 1) {
+  actual <- paste('datos/FMRR/RICKETT_', format(floor_date(Sys.Date(), 'week') + 1, '%d%m%y'), '.txt', sep = '')
+  anterior <- paste('datos/FMRR/RICKETT_', format(floor_date(Sys.Date(), 'week') - 6, '%d%m%y'), '.txt', sep = '')
+} else {
+  anterior <- paste('datos/FMRR/RICKETT_', format(floor_date(Sys.Date(), 'week') + 1, '%d%m%y'), '.txt', sep = '')
+  actual <- paste('datos/FMRR/RICKETT_', format(Sys.Date(), '%d%m%y'), '.txt', sep = '')
+}
+
+#anterior <- paste('datos/FMRR/RICKETT_100325.txt', sep = '')
+#actual <- paste('datos/FMRR/RICKETT_180325.txt', sep = '')
+
+# IDE_ID == 1041520 ~ as.Date.character('2023-07-03', '%Y-%m-%d')
+fmrr_actual <- read_delim(actual, delim = '|', locale = locale(encoding = 'latin1'), quote = '', comment = ''#, 
+#                          col_types = 'cdddcccccDdcdcddddcccccdcdcdcdcccccdddcdclldcdcdcdccccccdcdcdcdcDlDDDDDdcdclddccccdcdcdcDDddccccdcdcdcDDddcllldcdcdcllddddddcdddddcddddddDdddDddddddddddddcDdddddddddDddddddddddddddcdddddddddddddddll#ddddddlldlddddddddddlddddddddddddddddddddddddddDccdcdcdcdccdcdddddddddDdcddDdddddddDdddddddDdddddddDdddddddDddddddddddddDDddddDdDddDddDDcddDDddDDcddlDddDDddDcDlddlllddldcDDldDddDdddDDdcdlllDDcDD'
+) %>%
+  bind_rows(
+    read_delim('datos/FMRR/RICKETT_20240225.txt', delim = '|', locale = locale(encoding = 'latin1'), quote = '', comment = '') %>% mutate(IDE_TEL = as.numeric(IDE_TEL), IDE_CP = as.numeric(IDE_CP), TELFONO_TRABAJO = as.numeric(TELFONO_TRABAJO))
+  ) %>% 
+  mutate(#FEC_INI_SIGNOS_SINT = as.Date.character(FEC_INI_SIGNOS_SINT),
+         IDE_COL = str_remove_all(IDE_COL, pattern = ' Colonia| Pueblo| Ranchería| Ampliación| Fraccionamiento| Ejido| Residencial| Congregación| Unidad habitacional| Hacienda| Equipamiento| Poblado comunal| Zona federal'),
+         DES_MPO_RES = str_squish(str_remove(DES_MPO_RES, pattern = ' SON')),
+         DES_LOC_RES = str_squish(DES_LOC_RES),
+         DES_EDO_RES = str_squish(DES_EDO_RES),
+         DES_INS_UNIDAD = str_squish(DES_INS_UNIDAD),
+         DES_UNI_MED_NOTIF = str_squish(DES_UNI_MED_NOTIF),
+         DES_MPO_UNIDAD = str_squish(DES_MPO_UNIDAD),
+         FEC_SOL_ATEN = case_when(
+           IDE_ID == 1914422 ~ dmy('04-01-2025'),
+           T ~ FEC_SOL_ATEN
+         ),
+         ESTATUS_CASO = case_when(
+           IDE_ID %in% c(1002756, 1008548, 1066009, 1070311, 1069910, 1069979, 1307003, 1305818, 1362154) ~ 2,
+           IDE_ID %in% c(1781182) ~ 3,
+           T ~ ESTATUS_CASO
+         ), FEC_DEFUNCION = case_when(
+           IDE_ID == 1041520 ~ dmy('03/07/2023'),
+           T ~ FEC_DEFUNCION
+         )
+         ) %>%
+  filter(DES_EDO_RES == 'SONORA', year(floor_date(FEC_INI_SIGNOS_SINT, 'week') + 3) == year(Sys.Date())) 
+  #filter(IDE_ID != 1066010)# 'Hoja1'
+fmrr_anterior <- read_delim(anterior, delim = '|', locale = locale(encoding = 'latin1'), quote = '', comment = '', 
+                          col_types = 'cdddcccccDdcdcddddcccccdcdcdcdcccccdddcdclldcdcdcdccccccdcdcdcdcDlDDDDDdcdclddccccdcdcdcDDddccccdcdcdcDDddcllldcdcdcllddddddcdddddcddddddDdddDddddddddddddcDdddddddddDddddddddddddddcdddddddddddddddllddddddlldlddddddddddlddddddddddddddddddddddddddDccdcdcdcdccdcdddddddddDdcddDdddddddDdddddddDdddddddDdddddddDddddddddddddDDddddDdDddDddDDcddDDddDDcddlDddDDddDcDlddlllddldcDDldDddDdddDDdcdlllcDD') %>% 
+    bind_rows(
+    read_delim('datos/FMRR/RICKETT_20240225.txt', delim = '|', locale = locale(encoding = 'latin1'), quote = '', comment = '')
+  ) %>% 
+mutate(#FEC_INI_SIGNOS_SINT = as.Date.character(FEC_INI_SIGNOS_SINT),
+         IDE_COL = str_remove_all(IDE_COL, pattern = ' Colonia| Pueblo| Ranchería| Ampliación| Fraccionamiento| Ejido| Residencial| Congregación| Unidad habitacional| Hacienda| Equipamiento| Poblado comunal| Zona federal'),
+         DES_MPO_RES = str_squish(DES_MPO_RES),
+         DES_LOC_RES = str_squish(DES_LOC_RES),
+         DES_EDO_RES = str_squish(DES_EDO_RES),
+          ESTATUS_CASO = case_when(
+           IDE_ID %in% c(1002756, 1008548, 1066009, 1070311, 1069910, 1069979, 1307003, 1305818, 1362154) ~ 2,
+           IDE_ID %in% c(1781182) ~ 3,
+           T ~ ESTATUS_CASO
+         ), FEC_DEFUNCION = case_when(
+           IDE_ID == 1041520 ~ dmy('03/07/2023'),
+           T ~ FEC_DEFUNCION
+         )
+         ) %>%
+  filter(DES_EDO_RES == 'SONORA')         # 'Hoja1' 
+fmrr_anteriorCC <- read_delim(anterior, delim = '|', locale = locale(encoding = 'latin1'), quote = '', comment = '', 
+                          col_types = 'cdddcccccDdcdcddddcccccdcdcdcdcccccdddcdclldcdcdcdccccccdcdcdcdcDlDDDDDdcdclddccccdcdcdcDDddccccdcdcdcDDddcllldcdcdcllddddddcdddddcddddddDdddDddddddddddddcDdddddddddDddddddddddddddcdddddddddddddddllddddddlldlddddddddddlddddddddddddddddddddddddddDccdcdcdcdccdcdddddddddDdcddDdddddddDdddddddDdddddddDdddddddDddddddddddddDDddddDdDddDddDDcddDDddDDcddlDddDDddDcDlddlllddldcDDldDddDdddDDdcdlllcDD') %>% # 'Hoja1' 
+    bind_rows(
+    read_delim('datos/FMRR/RICKETT_20240225.txt', delim = '|', locale = locale(encoding = 'latin1'), quote = '', comment = '')
+  ) %>% 
+mutate(ESTATUS_CASO = case_when(
+    IDE_ID %in% c(1002756, 1008548, 1066009, 1070311, 1069910, 1069979, 1307003, 1305818, 1362154) ~ 2,
+    IDE_ID %in% c(1781182) ~ 3,
+    T ~ ESTATUS_CASO
+    ), FEC_DEFUNCION = case_when(
+      IDE_ID == 1041520 ~ dmy('03/07/2023'),
+      T ~ FEC_DEFUNCION
+      )) %>%
+  filter(ESTATUS_CASO == 2)  %>%
+  mutate(DES_EDO_RES = str_squish(DES_EDO_RES)) %>% 
+  filter(DES_EDO_RES == 'SONORA') %>% 
+  dplyr::select(IDE_ID) 
+fmrr_anteriorDF <- read_delim(anterior, delim = '|', locale = locale(encoding = 'latin1'), quote = '', comment = '', 
+                          col_types = 'cdddcccccDdcdcddddcccccdcdcdcdcccccdddcdclldcdcdcdccccccdcdcdcdcDlDDDDDdcdclddccccdcdcdcDDddccccdcdcdcDDddcllldcdcdcllddddddcdddddcddddddDdddDddddddddddddcDdddddddddDddddddddddddddcdddddddddddddddllddddddlldlddddddddddlddddddddddddddddddddddddddDccdcdcdcdccdcdddddddddDdcddDdddddddDdddddddDdddddddDdddddddDddddddddddddDDddddDdDddDddDDcddDDddDDcddlDddDDddDcDlddlllddldcDDldDddDdddDDdcdlllcDD') %>% # 'Hoja1' 
+    bind_rows(
+    read_delim('datos/FMRR/RICKETT_20240225.txt', delim = '|', locale = locale(encoding = 'latin1'), quote = '', comment = '')
+  ) %>% 
+mutate(ESTATUS_CASO = case_when(
+        IDE_ID %in% c(1002756, 1008548, 1066009, 1070311, 1069910, 1069979, 1307003, 1305818, 1362154) ~ 2,
+        IDE_ID %in% c(1781182) ~ 3,
+    T ~ ESTATUS_CASO
+    )) %>%
+  filter(CVE_DEFUNCION == 1, ESTATUS_CASO == 2) %>%
+  mutate(DES_EDO_RES = str_squish(DES_EDO_RES)) %>%
+  filter(DES_EDO_RES == 'SONORA') %>% 
+  dplyr::select(IDE_ID)
+```
+
+
+
+```{r, echo=F, warning=F, message=F}
+# Cargar las librerías necesarias
+library(httr)
+library(rvest)
+library(glue)
+
+pdf <- pdftools::pdf_text(
+  read_html(
+    content(
+      GET(
+        read_html(
+          content(
+          GET('https://www.gob.mx/salud/acciones-y-programas/direccion-general-de-epidemiologia-boletin-epidemiologico'), 'text')
+          ) %>%
+          html_nodes('a') %>%  
+          html_attr('href') %>% 
+          na.omit() %>% 
+          grep("boletinepidemiologico-sistema-nacional-de-vigilancia-epidemiologica-sistema-unico-de-informacion", x = ., value = TRUE, ignore.case = TRUE)
+        ),
+      'text')) %>%
+    html_nodes("a[href$='.pdf']") %>%  # Selecciona enlaces que terminan en .pdf
+    html_attr("href") %>%              # Extrae el atributo href (la URL)
+    na.omit() %>% 
+    paste('https://www.gob.mx', ., sep = '') %>% 
+    head(1)
+  )
+for (i in seq_along(pdf)) {
+  if (str_detect(pdf[i], fixed('Otras Rickettsiosis'))){
+    page <- i 
+    break
+  }
+}
+
+rows <- pdf[i] %>% 
+  textConnection() %>% 
+  scan(what="character", sep = "\n")
+
+for (e in seq_along(rows)) {
+  if (str_detect(rows[e], fixed('Aguascalientes'))){
+    page <- e 
+    break
+  }
+}
+
+bol <- data.frame(CLAVE_ENT = seq(1,32,1), Entidad = NA, SEM_2022 = NA, Mas_2022 = NA, Fem_2022 = NA, AC_2021 = NA, fmSEM_2022 = NA, fmMas_2022 = NA, fmFem_2022 = NA, fmAC_2021 = NA)
+for (i in 1:32) {
+  bol[i,2] <- unlist(strsplit(rows[i+e-1]," \\s+ "))[1]
+  bol[i,3] <- unlist(strsplit(rows[i+e-1]," \\s+ "))[2]
+  bol[i,4] <- unlist(strsplit(rows[i+e-1]," \\s+ "))[3]
+  bol[i,5] <- unlist(strsplit(rows[i+e-1]," \\s+ "))[4]
+  bol[i,6] <- unlist(strsplit(rows[i+e-1]," \\s+ "))[5]
+  bol[i,7] <- unlist(strsplit(rows[i+e-1]," \\s+ "))[6]
+  bol[i,8] <- unlist(strsplit(rows[i+e-1]," \\s+ "))[7]
+  bol[i,9] <- unlist(strsplit(rows[i+e-1]," \\s+ "))[8]
+  bol[i,10] <- unlist(strsplit(rows[i+e-1]," \\s+ "))[9]
+}
+
+bol <- bol %>%
+  #filter(!CLAVE_ENT < 1) %>%
+  mutate(SEM_2022 = as.numeric(SEM_2022), 
+         Mas_2022 = as.numeric(Mas_2022), 
+         Fem_2022 = as.numeric(Fem_2022), 
+         AC_2021 = as.numeric(AC_2021),
+         fmSEM_2022 = as.numeric(fmSEM_2022),
+         fmMas_2022 = as.numeric(fmMas_2022),
+         fmFem_2022 = as.numeric(fmFem_2022), 
+         fmAC_2021 = as.numeric(fmAC_2021)) %>%
+  mutate(SEM_2022 = ifelse(is.na(SEM_2022), 0, SEM_2022), 
+         Mas_2022 = ifelse(is.na(Mas_2022), 0, Mas_2022), 
+         Fem_2022 = ifelse(is.na(Fem_2022), 0, Fem_2022), 
+         AC_2021 = ifelse(is.na(AC_2021), 0, AC_2021),
+         fmSEM_2022 = ifelse(is.na(fmSEM_2022), 0, fmSEM_2022),
+         fmMas_2022 = ifelse(is.na(fmMas_2022), 0, fmMas_2022),
+         fmFem_2022 = ifelse(is.na(fmFem_2022), 0, fmFem_2022), 
+         fmAC_2021 = ifelse(is.na(fmAC_2021), 0, fmAC_2021)) %>%
+  mutate(total = Mas_2022 + Fem_2022 + fmMas_2022 + fmFem_2022)
+
+
+read_csv('00_Pob_Mitad_1950_2070.csv', locale = locale(encoding = 'UTF-8')) %>% 
+  filter(AÑO == as.numeric(format(Sys.Date(), '%Y')), ENTIDAD != 'República Mexicana') %>%
+  group_by(ENTIDAD) %>%
+  summarise(poblacion = sum(POBLACION, na.rm = T)) %>% 
+  full_join(bol %>% rename(ENTIDAD = Entidad)) %>% 
+  janitor::adorn_totals(where = 'row') %>% 
+  mutate(IA = round(total/poblacion * 100000, 2)) %>%
+  rename(Casos = total) %>%
+  arrange(desc(Casos)) %>%
+  mutate(ENTIDAD = fct_inorder(ENTIDAD)) -> nacional
+
+
+```
+
+## Panorama Nacional de FMRR `r year(Sys.Date())`   
+
+```{r, echo=F, warning=F, message=F, fig.width=10}
+plot_ly(nacional, x = ~ENTIDAD) %>%
+  filter(ENTIDAD != 'Total') %>%
+  add_bars(y = ~Casos, name = 'Casos', yaxis = 'y') %>% 
+  layout(title = '', legend = list(x = 1.1, y = 0.9, orientation = "v"),
+         yaxis2 = list(title = "Incidencia por 100 000 habs", side = "right", showgrid = F, ticks="outside",
+                       zerolinecolor = '#000000', overlaying = "y", range = c(0, 1.2 * max(nacional$IA[nacional$ENTIDAD != 'Total'], na.rm = T))),
+         xaxis = list(title = 'Entidad Federativa',
+                      showgrid = F,
+                      ticks="outside",
+                      zerolinecolor = '#000000', 
+                      tickangle=270#, categoryorder = "array", categoryarray = c(quinqueniosarray)
+         ),
+         yaxis = list(title = 'Número de casos',
+                      showgrid = F,
+                      ticks="outside", tickformat = ",d",
+                      zerolinecolor = '#000000', range = c(0, 1.2 * (max(nacional$Casos[nacional$ENTIDAD != 'Total'], na.rm = T))))) %>%
+  add_lines(y = ~IA, name = 'Incidencia acumulada', yaxis = 'y2')# %>%
+#  add_annotations(x = 0.1, y = 0.9, xref = "paper", yref = "paper", text = paste("Incidencia Nacional ", IAnac, "<br> casos por 100 000 habs", sep = ""), showarrow = F) %>%
+#  add_annotations(x = 0.9, y = 0.9, xref = "paper", yref = "paper", text = paste("Casos acumulados ", CAnac, "<br> a nivel nacional", sep = ""), showarrow = F)
+
+nacional %>% 
+  select(ENTIDAD, Casos, IA) %>% 
+  filter(ENTIDAD != 'Total') %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c( -1), 
+                                                 c( 'All')))) 
+
+
+```
+
+
+
+## Informe de Fiebre Manchada por Rickettsia Rickettsi
+
+```{r, echo=FALSE, message=F, warning=F}
+## SEMANA -----
+CC <- fmrr_actual %>%
+  filter(!IDE_ID %in% fmrr_anteriorCC$IDE_ID) %>%
+  filter(ESTATUS_CASO == 2)
+DEF <- fmrr_actual %>%
+  filter(!IDE_ID %in% fmrr_anteriorDF$IDE_ID) %>%
+  filter(ESTATUS_CASO == 2, CVE_DEFUNCION == 1)
+ESTUDIADOS <- fmrr_actual %>%
+  filter(!IDE_ID %in% fmrr_anterior$IDE_ID)
+
+semana <- tibble(`Casos confirmados` = nrow(CC),
+                 `Defunciones` = nrow(DEF))
+
+casos_municipio <- CC %>%
+  count(DES_MPO_RES) %>% 
+  mutate(DES_MPO_RES = str_to_title(DES_MPO_RES, locale = 'en')) %>%
+  rename(Municipio = DES_MPO_RES) %>%
+  arrange(desc(n))
+defunciones_municipio <- DEF %>%
+  count(DES_MPO_RES) %>%
+  mutate(DES_MPO_RES = str_to_title(DES_MPO_RES, locale = 'en')) %>%
+  rename(Municipio = DES_MPO_RES) %>%
+  arrange(desc(n))
+## ACUMULADOS ----
+casos_acumulados <- fmrr_actual %>% 
+  filter(ESTATUS_CASO == 2) %>%
+  count() %>%
+  rename(Casos = n)
+defunciones_acumulados <- fmrr_actual %>%
+  filter(ESTATUS_CASO == 2, CVE_DEFUNCION == 1) %>% 
+  count() %>%
+  rename(Defunciones = n)
+letalidad <- cbind(casos_acumulados, defunciones_acumulados) %>%
+  mutate(Letalidad = round(Defunciones/Casos*100, 1))
+remove(casos_acumulados)
+remove(defunciones_acumulados)
+## GRAFICAS ----
+```
+
+
+```{r, , echo=FALSE, message=F, warning=F, eval=T}
+### Tabla ----
+# Revisar bien lo de los diagnosticos para diferencias FMRR y FGFM
+tabla1 <- fmrr_actual %>%
+  filter(ESTATUS_CASO == 2) %>%
+  mutate(Defunciones = ifelse(CVE_DEFUNCION == 1, 'Defunción', 'No Fatal'),
+         DES_MPO_RES = case_when(
+           DES_MPO_RES == 'ROSARIO SON' ~ 'ROSARIO',
+           TRUE ~ DES_MPO_RES
+         )) %>%
+  count(DES_MPO_RES, Defunciones) %>%
+  pivot_wider(values_from = n, names_from = Defunciones) %>% 
+  full_join(tibble(DES_MPO_RES = NA, 'No Fatal' = NA, Defunción = NA)) %>% filter(!is.na(DES_MPO_RES)) %>% 
+  mutate(fgfmnofatales = 0, fgfmdefunciones = 0, Defunción = ifelse(is.na(Defunción), 0, Defunción), `No Fatal` = ifelse(is.na(`No Fatal`), 0, `No Fatal`)) %>%
+  mutate(totnofatales = `No Fatal` + fgfmnofatales, totdefunciones = Defunción + fgfmdefunciones) %>%
+  mutate(Letalidad = round(totdefunciones/(totnofatales+totdefunciones)*100, 1)) %>%
+  rename(MUN = DES_MPO_RES)
+# POBLACIONES PARA INCIDENCIA ----
+poblaciones <- readxl::read_xlsx('base_municipios_sonora.xlsx') %>%
+  filter(AÑO == year(floor_date(Sys.Date(), 'week') + 3)) %>% 
+  group_by(MUN) %>%
+  summarise(poblacion = sum(POB, na.rm = T)) %>%
+  mutate(MUN = stri_trans_general(str_to_upper(MUN, locale = 'en'), id = 'Latin-ASCII'))
+
+
+# Calculo de incidencia y tasa de mortalidad ----
+tabla2 <- left_join(tabla1 %>% mutate(MUN = stri_trans_general(str_to_upper(MUN, locale = 'en'), id = 'Latin-ASCII')), poblaciones) %>%
+  mutate(IA = round((totnofatales+totdefunciones)/poblacion*100000, 1),
+         TM = round(totdefunciones/poblacion*100000,1)) %>%
+  mutate(Municipio = str_to_title(MUN, locale = 'en')) %>%
+  select(MUN, Municipio, `No Fatal`, Defunción, fgfmnofatales, fgfmdefunciones, totnofatales, totdefunciones, IA, Letalidad, TM) %>%
+  arrange(desc(IA)) %>%
+  rename('No fatales (FMRR)' = `No Fatal`, 'Defunciones (FMRR)' = Defunción,
+         'No fatales (FGFM)' = fgfmnofatales, 'Defunciones (FGFM)' = fgfmdefunciones,
+         'Total no fatales' = totnofatales, 'Total defunciones' = totdefunciones) %>%
+  mutate(MUN = case_when(
+    MUN == 'PUERTO PEÑASCO' ~ 'PUERTO PENASCO',
+    TRUE ~ MUN
+  ))
+
+totales <- tibble(Municipio = 'Total', 
+                      `No fatales (FMRR)` = sum(tabla2$`No fatales (FMRR)`, na.rm = T),
+                      `Defunciones (FMRR)` = sum(tabla2$`Defunciones (FMRR)`, na.rm = T),
+                      `No fatales (FGFM)` = sum(tabla2$`No fatales (FGFM)`, na.rm = T),
+                      `Defunciones (FGFM)` = sum(tabla2$`Defunciones (FGFM)`, na.rm = T),
+                      `Total no fatales` = sum(tabla2$`Total no fatales`, na.rm = T),
+                      `Total defunciones` = sum(tabla2$`Total defunciones`, na.rm = T),
+                      IA = round((sum(tabla2$`Total no fatales`, na.rm = T) + sum(tabla2$`Total defunciones`, na.rm = T))/sum(poblaciones$poblacion, na.rm = T) * 100000, 1),
+                      Letalidad = round(sum(tabla2$`Total defunciones`, na.rm = T)/(sum(tabla2$`Total no fatales`, na.rm = T) + sum(tabla2$`Total defunciones`, na.rm = T)) * 100, 1),
+                      TM = round(sum(tabla2$`Total defunciones`, na.rm = T)/sum(poblaciones$poblacion, na.rm = T) * 100000, 1))
+tabla3 <- rbind(tabla2[,-1], totales)
+
+tab1 <- fmrr_actual %>% filter(ESTATUS_CASO == 2) %>% count(CVE_JUR_RES) %>% mutate(porcentaje = n/sum(n, na.rm = T)*100) %>% arrange(CVE_JUR_RES)
+
+min <- CC %>% filter(ESTATUS_CASO == 2) %>% summarise(min(IDE_EDA_ANO, na.rm = T))
+max <- CC %>% filter(ESTATUS_CASO == 2) %>% summarise(max(IDE_EDA_ANO, na.rm = T))
+sex <- fmrr_actual %>% filter(ESTATUS_CASO == 2) %>% count(IDE_SEX) %>% mutate(porcentaje = n/sum(n, na.rm = T)) %>% mutate(IDE_SEX = case_when(
+  IDE_SEX == 1 ~ 'Hombre',
+  IDE_SEX == 2 ~ 'Mujer'
+))
+
+
+```
+
+### Casos sospechosos  
+`r nrow(ESTUDIADOS)`
+
+### Casos sospechosos acumulados  
+`r nrow(fmrr_actual)`
+
+### Casos en la semana de Rickettsiosis, Sonora `r year(Sys.Date())`     
+`r flextable(semana)` 
+
+#### Distribución por municipio de casos  
+`r flextable(casos_municipio)`  
+
+#### Distribución por municipio de defunciones  
+`r flextable(defunciones_municipio)`  
+
+### Casos acumulados de Rickettsiosis, Sonora `r year(Sys.Date())`     
+`r flextable(letalidad)`  
+
+### Porcentaje por Distrito de Salud  
+`r flextable(tab1)`  
+
+Las edades de los casos presentados en la semana fueron entre `r min` y `r max` años  
+
+### Distribución por sexo  
+`r flextable(sex)`
+
+### Tabla I. Casos y defunciones de FMRR y RGFM por municipio de residencia en Sonora, `r year(Sys.Date())`     
+`r flextable(tabla3)`  
+
+
+### Casos por edad y sexo   
+
+```{r, echo=FALSE, message=F, warning=F, eval=T}
+### Casos por edad y sexo ----
+fmrr_actual %>%
+  filter(ESTATUS_CASO == 2) %>%
+  mutate(edad_fac = case_when(
+    IDE_EDA_ANO >= 0 & IDE_EDA_ANO <= 5    ~ '0 - 5',
+    IDE_EDA_ANO >= 6 & IDE_EDA_ANO <= 14  ~ '6 - 14',
+    IDE_EDA_ANO >= 15 & IDE_EDA_ANO <= 24 ~ '15 - 24',
+    IDE_EDA_ANO >= 25 & IDE_EDA_ANO <= 44 ~ '25 - 44',
+    IDE_EDA_ANO >= 45 & IDE_EDA_ANO <= 59 ~ '45 - 59',
+    IDE_EDA_ANO >= 60                     ~ '60 y más',
+    TRUE ~ NA_character_
+  ), sex = case_when(
+    IDE_SEX == 1 ~ 'Hombre',
+    IDE_SEX == 2 ~ 'Mujer',
+    TRUE ~ NA_character_
+  )) %>%
+  mutate(edad_fac = fct(edad_fac, levels = c('0 - 5', '6 - 14','15 - 24','25 - 44','45 - 59','60 y más'))) %>%
+  count(sex, edad_fac) %>%
+  pivot_wider(values_from = n, names_from = sex) %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c( -1), 
+                                                 c( 'All'))))
+#write.csv(casos_edad, 'casos por sexo y edad.csv', row.names = F)
+```
+
+
+### Casos y defunciones por derechohabiencia    
+
+```{r, echo=FALSE, message=F, warning=F, eval=T}
+### Casos y defunciones por derechohabiencia ----
+fmrr_actual %>%
+  filter(ESTATUS_CASO == 2) %>%
+  mutate(DES_INS_UNIDAD = str_squish(DES_INS_UNIDAD)) %>%
+  mutate(Defunciones = ifelse(CVE_DEFUNCION == 1, 'Defunción', 'No Fatal'),
+         DES_INS_UNIDAD = ifelse(DES_INS_UNIDAD == 'OTRAS', 'ISSSTESON', DES_INS_UNIDAD)) %>%
+  count(Defunciones, DES_INS_UNIDAD) %>%
+  pivot_wider(values_from = n, names_from = Defunciones) %>%
+  arrange(desc(Defunción)) %>% full_join(tibble(DES_INS_UNIDAD = NA, 'No Fatal' = NA, Defunción = NA)) %>% filter(!is.na(DES_INS_UNIDAD)) %>%  
+  select(DES_INS_UNIDAD, `No Fatal`, Defunción) %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c( -1), 
+                                                 c( 'All'))))
+
+#write.csv(casos_sector, 'casos por sector.csv', row.names = F)
+```
+
+
+#### Descripción de las defunciones por FMRR  
+
+```{r, echo=FALSE, message=F, warning=F}
+fmrr_actual %>%
+  filter(ESTATUS_CASO == 2, CVE_DEFUNCION == 1) %>% 
+  count(IDE_SEX) %>% 
+  mutate(IDE_SEX = case_when(
+    IDE_SEX == 1 ~ 'Hombre', 
+    IDE_SEX == 2 ~ 'Mujer'
+    )) %>% 
+  rename(Sexo = IDE_SEX, Defunciones = n) %>% 
+  flextable()
+```
+
+
+```{r, echo=FALSE, message=F, warning=F}
+fmrr_actual %>%
+  filter(ESTATUS_CASO == 2) %>% 
+  count(CVE_DEFUNCION) %>%
+  mutate('% Letalidad' = round(n/sum(n, na.rm = T)*100, 1)) %>%
+  filter(CVE_DEFUNCION == 1) %>%
+  select('% Letalidad') %>% 
+  flextable()
+
+```
+
+```{r, echo=FALSE, message=F, warning=F}
+fmrr_actual %>%
+  filter(ESTATUS_CASO == 2, CVE_DEFUNCION == 1) %>%
+  mutate(DES_MPO_RES = str_squish(str_to_title(DES_MPO_RES))) %>%
+  count(CVE_JUR_RES, DES_MPO_RES) %>%
+  rename('Distrito de Salud' = CVE_JUR_RES, Municipio = DES_MPO_RES, Defunciones = n) %>%
+  flextable()
+
+```
+
+
+```{r, echo=FALSE, message=F, warning=F}
+edades <- readxl::read_xlsx('base_municipios_sonora.xlsx') %>%
+  filter(AÑO == year(floor_date(Sys.Date(), 'week') + 3)) %>% 
+  group_by(EDAD_QUIN) %>%
+  summarise(poblacion = sum(POB, na.rm = T)) %>%
+  mutate(EDAD_QUIN = case_when(
+    EDAD_QUIN == 'pobm_00_04' ~ '0 - 4',
+    EDAD_QUIN == 'pobm_05_09' ~ '5 - 9',
+    EDAD_QUIN == 'pobm_10_14' ~ '10 - 14',
+    EDAD_QUIN == 'pobm_15_19' ~ '15 - 19',
+    EDAD_QUIN == 'pobm_20_24' ~ '20 - 24',
+    EDAD_QUIN == 'pobm_25_29' ~ '25 - 29',
+    EDAD_QUIN == 'pobm_30_34' ~ '30 - 34',
+    EDAD_QUIN == 'pobm_35_39' ~ '35 - 39',
+    EDAD_QUIN == 'pobm_40_44' ~ '40 - 44',
+    EDAD_QUIN == 'pobm_45_49' ~ '45 - 49',
+    EDAD_QUIN == 'pobm_50_54' ~ '50 - 54',
+    EDAD_QUIN == 'pobm_55_59' ~ '55 - 59',
+    EDAD_QUIN == 'pobm_60_64' ~ '60 - 64',
+    EDAD_QUIN == 'pobm_65_mm' ~ '65 y más'
+  )) %>%
+  rename('Grupo de edad' = EDAD_QUIN)
+  
+fmrr_actual %>% 
+  filter(ESTATUS_CASO == 2, CVE_DEFUNCION == 1) %>%
+  arrange(IDE_EDA_ANO) %>%
+  mutate(GPO_EDAD = cut(IDE_EDA_ANO, 
+                        breaks = c(0,4,9,14,19,24,29,34,39,44,49,54,59,64,Inf),
+                        labels = c('0 - 4', '5 - 9', '10 - 14', '15 - 19','20 - 24', '25 - 29','30 - 34', '35 - 39','40 - 44', '45 - 49','50 - 54', '55 - 59','60 - 64', '65 y más'),
+                        include.lowest = T)) %>%
+  count(GPO_EDAD) %>%
+  rename('Grupo de edad' = GPO_EDAD, Defunciones = n) %>% 
+  left_join(edades) %>%
+  mutate(TM = round(Defunciones/poblacion*100000,1)) %>%
+  select(-poblacion) %>%
+  flextable()
+
+```
+
+## Edad promedio de los casos confirmados fallecidos **`r fmrr_actual %>% filter(ESTATUS_CASO == 2, CVE_DEFUNCION == 1) %>% summarise(round(mean(IDE_EDA_ANO, na.rm = T), 1))`** años
+
+
+
+## Incidencia por grupo de edad   
+
+```{r, message=F, echo=F, warning=F}
+fmrr_actual %>% 
+  filter(ESTATUS_CASO == 2) %>%
+  arrange(IDE_EDA_ANO) %>%
+  mutate(GPO_EDAD = cut(IDE_EDA_ANO, 
+                        breaks = c(0,4,9,14,19,24,29,34,39,44,49,54,59,64,Inf),
+                        labels = c('0 - 4', '5 - 9', '10 - 14', '15 - 19','20 - 24', '25 - 29','30 - 34', '35 - 39','40 - 44', '45 - 49','50 - 54', '55 - 59','60 - 64', '65 y más'),
+                        include.lowest = T)) %>%
+  count(GPO_EDAD) %>%
+  rename('Grupo de edad' = GPO_EDAD, Casos = n) %>% 
+  left_join(edades) %>%
+  mutate(IA = round(Casos/poblacion*100000,1)) %>%
+  select(-poblacion) %>%
+  flextable()
+
+```
+
+
+```{r, echo=FALSE, message=F, warning=F}
+fmrr_actual %>% 
+  filter(ESTATUS_CASO == 2, CVE_DEFUNCION == 1) %>%
+  mutate(Comor = TRANS_HEMORR + DIABETES + HIPERTENSION + ENF_ULCERO_PEPTICA + ENF_RENAL + INMUNOSUPRESION + CIRROSIS_HEPATICA + EMBARAZO + OTROS) %>%
+  mutate(Comorbilidades = case_when(
+    Comor >= 1 ~ 'Si tiene comorbilidades',
+    Comor == 0 ~ 'No tiene comorbilidades'
+  )) %>%
+  count(Comorbilidades) %>%
+  flextable()
+```
+
+
+```{r, echo=FALSE, message=F, warning=F}
+fmrr_actual %>% 
+  filter(ESTATUS_CASO == 2, CVE_DEFUNCION == 1) %>%
+  count(TRANS_HEMORR, DIABETES, HIPERTENSION, ENF_ULCERO_PEPTICA, ENF_RENAL, INMUNOSUPRESION, CIRROSIS_HEPATICA, EMBARAZO, OTROS) %>%
+  pivot_longer(cols = c(TRANS_HEMORR, DIABETES, HIPERTENSION, ENF_ULCERO_PEPTICA, ENF_RENAL, INMUNOSUPRESION, CIRROSIS_HEPATICA, EMBARAZO, OTROS)) %>%
+  mutate(name = case_when(
+    name == 'TRANS_HEMORR' ~ 'Trastornos hemorrágicos',
+    name == 'DIABETES' ~ 'Diabetes',
+    name == 'HIPERTENSION' ~ 'Hipertensión',
+    name == 'ENF_ULCERO_PEPTICA' ~ 'Enfermedad ulcero péptica',
+    name == 'ENF_RENAL' ~ 'Enfermedad renal',
+    name == 'INMUNOSUPRESION' ~ 'Inmunosupresión',
+    name == 'CIRROSIS_HEPATICA' ~ 'Cirrosis hepática',
+    name == 'EMBARAZO' ~ 'Embarazo',
+    name == 'OTROS' ~ 'Otros'
+  )) %>%
+  filter(value == 1) %>%
+  select(name, n) %>% 
+  rename(Comorbilidad = name, Defunciones = n) %>%
+  flextable()
+
+```
+
+
+Días promedio desde su inicio de síntomas a defunción **`r fmrr_actual %>% filter(ESTATUS_CASO == 2, CVE_DEFUNCION == 1) %>% mutate(at_sint = FEC_DEFUNCION - FEC_INI_SIGNOS_SINT) %>% select(at_sint) %>% summarise(round(mean(at_sint, na.rm = T),1))`**
+
+Días promedio desde su primera atención a defunción **`r fmrr_actual %>% filter(ESTATUS_CASO == 2, CVE_DEFUNCION == 1) %>% mutate(def_at = FEC_DEFUNCION - FEC_SOL_ATEN) %>% select(def_at) %>% summarise(round(mean(def_at, na.rm = T),1))`**
+
+
+
+
+## MAPA  
+
+
+```{r, echo=FALSE, message=F, warning=F, eval=T}
+son <- st_read(dsn = "muni_2018gw/muni_2018gw.shp", quiet = TRUE) %>%
+  filter(NOM_ENT == "Sonora") %>%
+  mutate(MUN = stri_trans_general(str = str_to_upper(NOM_MUN, locale = 'en'), id = "Latin-ASCII")) %>%
+  st_transform(4326)
+son <- full_join(son, tabla2)
+#pal <- colorBin(c("#CD946F","#EF7F1A", "#56070C"), son$IA, 
+#                bins = c(0,max(son$IA, na.rm = T)/3,max(son$IA, na.rm = T)/3*2,max(son$IA, na.rm = T)), 
+#                pretty = F, 
+#                na.color = "#a9a7a5")
+#plabs <- c(0,round(max(son$IA, na.rm = T)/3, 1), round(max(son$IA, na.rm = T)/3*2, 1), round(max(son$IA, na.rm = T),1), 'Sin casos')
+
+pal <- colorBin(c("#CD946F","#EF7F1A", "#56070C"), son$IA, 
+                bins = c(0,summary(son$IA, na.rm = T)[3],summary(son$IA, na.rm = T)[5],summary(son$IA, na.rm = T)[6]), 
+                pretty = F, 
+                na.color = "#a9a7a5")
+plabs <- c(0,round(summary(son$IA, na.rm = T)[3], 1), round(summary(son$IA, na.rm = T)[5], 1), round(summary(son$IA, na.rm = T)[6],1), 'Sin casos')
+
+
+leaflet() %>%
+  #  addPolygons(data = son, 
+  #              label = ~paste(NOM_MUN), 
+  #              group = "Mapa",
+  #              fillColor = "#a9a7a5", 
+  #              fillOpacity = 1, 
+  #              color = "black",
+  #              weight = 1) %>%
+  addPolygons(data = son, 
+              label = ~paste(NOM_MUN,
+                             ifelse(!is.na(IA), paste("incidencia de ",round(IA, digits = 1)," por 100,000 habs.", sep = ''),
+                                    paste("sin casos")), 
+                             sep = ", "), 
+              group = "Incidencia",
+              fillColor = ~pal(IA), 
+              fillOpacity = 1, 
+              weight = 1,               
+              color = "black",
+              labelOptions = labelOptions(style = list(textsize = "30px"))) %>%
+  addLegend("bottomleft", 
+            group = "Incidencia",
+            colors = c("#56070C",
+                       "#EF7F1A",
+                       "#CD946F",
+                       "#a9a7a5"),
+            labels= c(paste(as.numeric(plabs[3]) + 0.1,'-', plabs[4]),
+                      paste(as.numeric(plabs[2]) + 0.1,'-', plabs[3]),
+                      paste('0.1 -', plabs[2]),
+                      plabs[5]),
+            title = "Incidencia por 100,000 habs.") %>%
+  #  addLayersControl(baseGroups = "Mapa",
+  #                   overlayGroups = c("Incidencia"),
+  #                   options = layersControlOptions(collapsed = FALSE)) %>%
+  addScaleBar(position = "bottomright", options = scaleBarOptions(maxWidth = 200, metric = T, imperial = F)) %>%
+  #  addProviderTiles(providers$CartoDB.Positron) %>%
+  setView(-111.04834001095054, 29.72064764786741,zoom = 6)
+
+```
+
+
+
+
+
+
+```{r, echo=F, warning=F, message=F}
+#e1 <- st_read('../889463171829_s/01_aguascalientes/conjunto de datos/01ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e2 <- st_read('../889463171829_s/02_bajacalifornia/conjunto de datos/02ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e3 <- st_read('../889463171829_s/03_bajacaliforniasur/conjunto de datos/03ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e4 <- st_read('../889463171829_s/04_campeche/conjunto de datos/04ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e5 <- st_read('../889463171829_s/05_coahuiladezaragoza/conjunto de datos/05ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e6 <- st_read('../889463171829_s/06_colima/conjunto de datos/06ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e7 <- st_read('../889463171829_s/07_chiapas/conjunto de datos/07ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e8 <- st_read('../889463171829_s/08_chihuahua/conjunto de datos/08ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e9 <- st_read('../889463171829_s/09_ciudaddemexico/conjunto de datos/09ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e10 <- st_read('../889463171829_s/10_durango/conjunto de datos/10ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e11 <- st_read('../889463171829_s/11_guanajuato/conjunto de datos/11ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e12 <- st_read('../889463171829_s/12_guerrero/conjunto de datos/12ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e13 <- st_read('../889463171829_s/13_hidalgo/conjunto de datos/13ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e14 <- st_read('../889463171829_s/14_jalisco/conjunto de datos/14ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e15 <- st_read('../889463171829_s/15_mexico/conjunto de datos/15ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e16 <- st_read('../889463171829_s/16_michoacandeocampo/conjunto de datos/16ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e17 <- st_read('../889463171829_s/17_morelos/conjunto de datos/17ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e18 <- st_read('../889463171829_s/18_nayarit/conjunto de datos/18ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e19 <- st_read('../889463171829_s/19_nuevoleon/conjunto de datos/19ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e20 <- st_read('../889463171829_s/20_oaxaca/conjunto de datos/20ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e21 <- st_read('../889463171829_s/21_puebla/conjunto de datos/21ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e22 <- st_read('../889463171829_s/22_queretaro/conjunto de datos/22ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e23 <- st_read('../889463171829_s/23_quintanaroo/conjunto de datos/23ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e24 <- st_read('../889463171829_s/24_sanluispotosi/conjunto de datos/24ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e25 <- st_read('../889463171829_s/25_sinaloa/conjunto de datos/25ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e26 <- st_read('../889463171829_s/26_sonora/conjunto de datos/26ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e27 <- st_read('../889463171829_s/27_tabasco/conjunto de datos/27ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e28 <- st_read('../889463171829_s/28_tamaulipas/conjunto de datos/28ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e29 <- st_read('../889463171829_s/29_tlaxcala/conjunto de datos/29ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e30 <- st_read('../889463171829_s/30_veracruzignaciodelallave/conjunto de datos/30ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e31 <- st_read('../889463171829_s/31_yucatan/conjunto de datos/31ent.shp', quiet = TRUE) %>% st_transform(4326)
+#e32 <- st_read('../889463171829_s/32_zacatecas/conjunto de datos/32ent.shp', quiet = TRUE) %>% st_transform(4326)
+
+#ess <- rbind(e1,e2,e3,e4,e5,e6,e7,e8,e9,e10,
+#             e11,e12,e13,e14,e15,e16,e17,e18,e19,e20,
+#             e21,e22,e23,e24,e25,e26,e27,e28,e29,e30,
+#             e31,e32) %>%
+#  mutate(Entidad = NOM_ENT)
+#ess1 <- left_join(ess, nacional) %>%
+#  mutate(IA = ifelse(IA == 0, NA, IA))
+
+#pal <- colorBin(c("#CD946F","#EF7F1A", "#56070C"), nacional$IA, 
+#                bins = c(0, round(max(ess1$IA, na.rm = T)/3, 1), round(max(ess1$IA, na.rm = T)/3*2, 1), round(max(ess1$IA, na.rm = T),1) + 1), 
+#                pretty = F, 
+#                na.color = "#a9a7a5")
+pal <- leaflet::colorNumeric(c("#CD946F","#EF7F1A", "#56070C"), nacional$IA, na.color = "#a9a7a5")
+
+
+#plabs <- c(0.01,round(max(ess1$IA, na.rm = T)/3, 2), round(max(ess1$IA, na.rm = T)/3*2, 2), round(max(ess1$IA, na.rm = T),2), 'Sin casos')
+#leaflet() %>%
+#  addPolygons(data = ess1, 
+#              stroke = T, weight = 1,  
+#              color = 'black',
+#              fillOpacity = 1, 
+#              fillColor = ~pal(IA)) %>%
+#  setMapWidgetStyle(list(background= "white")) %>%
+#  addLegend("bottomleft", 
+#            group = "Incidencia",
+#            colors = c("#56070C",
+#                       "#EF7F1A",
+#                       "#CD946F",
+#                       "#a9a7a5"),
+#            labels= c(paste(as.numeric(plabs[3]) + 0.01,'-', plabs[4]),
+#                      paste(as.numeric(plabs[2]) + 0.01,'-', plabs[3]),
+#                      paste('0.01 -', plabs[2]),
+#                      plabs[5]),
+#           title = "Incidencia de FMRR por 100,000 habs.")
+  
+
+```
+
+### Semana por Distrito de Salud    
+
+```{r, echo=F, warning=F, message=F}
+dums <- tibble(semana = c(rep(epiweek(Sys.Date()) - 2, 6), rep(epiweek(Sys.Date()) - 1, 6), rep(epiweek(Sys.Date()), 6)), 'Distrito de Salud' = rep(1:6, 3))
+fmrr_actual %>%
+  filter(epiweek(FEC_INI_SIGNOS_SINT) %in% seq(epiweek(Sys.Date()) - 2, epiweek(Sys.Date()))) %>% 
+  group_by(semana = epiweek(FEC_INI_SIGNOS_SINT)) %>% 
+  count('Distrito de Salud' = CVE_JUR_RES, ESTATUS_CASO) %>% 
+  pivot_wider(values_from = n, names_from = ESTATUS_CASO, values_fill = 0) %>% 
+  left_join(tibble(`Distrito de Salud` = NA, `2` = NA, `1` = NA, `3` = NA)) %>% 
+  filter(!is.na(`Distrito de Salud`)) %>% 
+  rename(Probables = `1`, Confirmados = `2`, Descartados = `3`) %>% 
+  right_join(dums) %>% 
+  arrange(semana, `Distrito de Salud`) %>% 
+  mutate(Probables = ifelse(is.na(Probables), 0, Probables),
+         Confirmados = ifelse(is.na(Confirmados), 0, Confirmados),
+         Descartados = ifelse(is.na(Descartados), 0, Descartados)) %>% 
+  dplyr::select(`Distrito de Salud`, semana, Probables, Descartados, Confirmados) %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c( -1), 
+                                                 c( 'All')))) 
+
+#write.csv('Semana_DS.csv', row.names = F, fileEncoding = 'latin1')
+
+
+
+```
+
+
+## Indicadores   
+
+```{r, echo=F, warning=F, message=F}
+if (Sys.Date() != floor_date(Sys.Date(), 'week') + 1) {
+fmrr_actual %>% 
+  filter(DES_EDO_RES == 'SONORA') %>%
+    mutate(FEC_SOL_ATEN = case_when(
+           IDE_ID == 1914422 ~ dmy('04-01-2025'),
+           T ~ FEC_SOL_ATEN
+         )
+         ) %>% 
+  mutate(opor_aten = as.numeric(FEC_SOL_ATEN - FEC_INI_SIGNOS_SINT),
+         not_opor = as.numeric(FEC_NOTIF_EDO - FEC_SOL_ATEN),
+         tx_sx = as.numeric(FEC_INI_TRAT_RICKET - FEC_INI_SIGNOS_SINT),
+         rx_mx = as.numeric(FECHA_RESULTADO_RICKETT_RTPCR - FECHA_TOMA_RICKETT_SANGRE),
+  ) %>%
+    mutate(opor_aten = ifelse(opor_aten >= 0, opor_aten, NA),
+         not_opor = ifelse(not_opor >= 0, not_opor, NA),
+         tx_sx = ifelse(tx_sx >= 0, tx_sx, NA),
+         rx_mx = ifelse(rx_mx >= 0, rx_mx, NA),
+) %>%
+  group_by(CVE_JUR_RES) %>% 
+  summarise(opor_aten = round(mean(opor_aten, na.rm = T), 1),
+            not_opor = round(mean(not_opor, na.rm = T), 1),
+            tx_sx = round(mean(tx_sx, na.rm = T), 1),
+            rx_mx = round(mean(rx_mx, na.rm = T), 1)
+  ) %>% 
+  rename('Oportunidad de atención' = opor_aten,
+         'Notificación oportuna' = not_opor,
+         'Inicio de síntomas vs tratamiento' = tx_sx,
+         'Toma de muestra y resultado' = rx_mx,
+         DSB = CVE_JUR_RES) %>% 
+  bind_rows(
+    fmrr_actual %>% 
+  filter(DES_EDO_RES == 'SONORA') %>%
+    mutate(FEC_SOL_ATEN = case_when(
+           IDE_ID == 1914422 ~ dmy('04-01-2025'),
+           T ~ FEC_SOL_ATEN
+         )
+         ) %>% 
+  mutate(opor_aten = as.numeric(FEC_SOL_ATEN - FEC_INI_SIGNOS_SINT),
+         not_opor = as.numeric(FEC_NOTIF_EDO - FEC_SOL_ATEN),
+         tx_sx = as.numeric(FEC_INI_TRAT_RICKET - FEC_INI_SIGNOS_SINT),
+         rx_mx = as.numeric(FECHA_RESULTADO_RICKETT_RTPCR - FECHA_TOMA_RICKETT_SANGRE),
+          ) %>%
+  mutate(opor_aten = ifelse(opor_aten >= 0, opor_aten, NA),
+         not_opor = ifelse(not_opor >= 0, not_opor, NA),
+         tx_sx = ifelse(tx_sx >= 0, tx_sx, NA),
+         rx_mx = ifelse(rx_mx >= 0, rx_mx, NA),
+        ) %>%
+  summarise(opor_aten = round(mean(opor_aten, na.rm = T), 1),
+            not_opor = round(mean(not_opor, na.rm = T), 1),
+            tx_sx = round(mean(tx_sx, na.rm = T), 1),
+            rx_mx = round(mean(rx_mx, na.rm = T), 1)
+            ) %>% 
+  rename('Oportunidad de atención' = opor_aten,
+         'Notificación oportuna' = not_opor,
+         'Inicio de síntomas vs tratamiento' = tx_sx,
+         'Toma de muestra y resultado' = rx_mx) %>% 
+  mutate(DSB = 0)
+  ) %>% mutate(DSB = ifelse(DSB == 0, 'Estatal', DSB)) %>% 
+  flextable() %>% autofit()
+} else {
+  print('NO HAY INFORMACIÓN PARA EL CALCULO DE INDICADORES')
+}
+
+```
+
+
+
+
+
+```{r, echo=F, warning=F, message=F}
+fmrr_2023 <- read_delim('datos/FMRR/RICKETT_20240225.txt', delim = '|', quote = '', comment = '', locale = locale(encoding = 'latin1'))
+fmrr_2023 %>% 
+  mutate(DES_EDO_RES = str_squish(DES_EDO_RES)) %>% 
+  filter(DES_EDO_RES == 'SONORA') %>% 
+  filter(FEC_CAPTURA <= ymd(paste(year(Sys.Date() - 1) - 1, str_pad(month(Sys.Date() -1), 2, pad = 0), day(Sys.Date() -1), sep = '-' ))) %>% 
+  count(CVE_JUR_RES) %>% 
+  mutate(CVE_JUR_RES = as.character(CVE_JUR_RES)) %>% 
+  rename(DSB = CVE_JUR_RES, 'Notificados en 2024' = n) %>% 
+  janitor::adorn_totals(where = 'row', name = 'Estatal') %>% 
+  full_join(
+    fmrr_actual %>% 
+      mutate(DES_EDO_RES = str_squish(DES_EDO_RES)) %>% distinct(IDE_ID, .keep_all = T) %>% 
+      filter(DES_EDO_RES == 'SONORA', year(FEC_CAPTURA) == year(Sys.Date())) %>% 
+      count(CVE_JUR_RES) %>% 
+      mutate(CVE_JUR_RES = as.character(CVE_JUR_RES)) %>% 
+      rename(DSB = CVE_JUR_RES, 'Notificados en 2025' = n) %>% 
+      janitor::adorn_totals(where = 'row', name = 'Estatal') 
+    ) %>% 
+  arrange(DSB) %>% 
+  mutate('Diferencias en %' = round(((`Notificados en 2025` - `Notificados en 2024`)/`Notificados en 2024`)*100, 1)) %>% 
+  flextable() %>% autofit()
+
+```
+
+
+
+
+```{r, echo=F, warning=F, message=F}
+temp <- tempfile(fileext = '.xlsx')
+download.file(
+read_html('http://www.dgis.salud.gob.mx/contenidos/intercambio/clues_gobmx.html') %>%
+  html_elements('h3') %>% 
+  html_nodes("a[href]") %>% 
+  html_attr("href"), 
+temp, mode = 'wb')
+clues <- readxl::read_xlsx(temp)
+
+clues <- clues %>% 
+  filter(`CLAVE DE LA ENTIDAD` == '26')
+primer <- clues %>% filter(`NIVEL ATENCION` %in% c('PRIMER NIVEL', 'NO APLICA')) %>% dplyr::select(CLUES)
+seter <- clues %>% filter(`NIVEL ATENCION` %in% c('SEGUNDO NIVEL', 'TERCER NIVEL')) %>% dplyr::select(CLUES)
+fmrr_actual %>% 
+  filter(DES_EDO_RES == 'SONORA', year(FEC_CAPTURA) == year(Sys.Date())) %>% 
+  count(CVE_JUR_RES) %>%  rename(Total = n) %>% 
+  left_join(
+    fmrr_actual %>% 
+      filter(year(FEC_CAPTURA) == year(Sys.Date()), 
+        DES_EDO_RES == 'SONORA') %>% 
+      mutate(nivel = case_when(
+        !is.na(CVE_UNI_MED_TRATANTE) & CVE_UNI_MED_TRATANTE %in% primer$CLUES ~ 1,
+        !is.na(CVE_UNI_MED_TRATANTE) & CVE_UNI_MED_TRATANTE %in% seter$CLUES ~ 2,
+        is.na(CVE_UNI_MED_TRATANTE) & CVE_UNI_MED_NOTIF %in% primer$CLUES ~ 1,
+        is.na(CVE_UNI_MED_TRATANTE) & CVE_UNI_MED_NOTIF %in% seter$CLUES ~ 2,
+      )) %>% 
+      mutate(nivel = ifelse(is.na(nivel), 2, nivel)) %>% 
+      count(CVE_JUR_RES, nivel) %>% 
+      pivot_wider(values_from = n, values_fill = 0, names_from = nivel) %>% 
+      rename('Primer nivel' = `1`, '2-3 nivel' = `2`)
+  ) %>% 
+  left_join(
+    fmrr_actual %>% 
+      filter(DES_EDO_RES == 'SONORA', ESTATUS_CASO == 2, year(FEC_CAPTURA) == year(Sys.Date())) %>% 
+      count(CVE_JUR_RES) %>% rename(Confirmados = n)
+  ) %>% 
+  left_join(
+    fmrr_actual %>% 
+      filter(DES_EDO_RES == 'SONORA', ESTATUS_CASO == 2, CVE_DEFUNCION == 1, year(FEC_CAPTURA) == year(Sys.Date())) %>% 
+      count(CVE_JUR_RES) %>% rename(Defunciones = n)
+  ) %>% 
+  left_join(
+    fmrr_actual %>% 
+      filter(DES_EDO_RES == 'SONORA', ESTATUS_CASO == 3, year(FEC_CAPTURA) == year(Sys.Date())) %>% 
+      count(CVE_JUR_RES) %>% rename(Descartados = n)
+  ) %>% 
+  mutate(Confirmados = ifelse(is.na(Confirmados), 0, Confirmados),
+         Defunciones = ifelse(is.na(Defunciones), 0, Defunciones),
+         Descartados = ifelse(is.na(Descartados), 0, Descartados)) %>% 
+  janitor::adorn_totals(where = 'row', name = 'Estatal') %>% 
+  mutate(p_primer_nivel = round(`Primer nivel`/Total * 100, 1),
+         p_2_3_nivel = round(`2-3 nivel`/Total * 100, 1),
+         Positividad = round(Confirmados/(Confirmados + Descartados) * 100, 1),
+         Letalidad = round(Defunciones/Confirmados*100, 1)
+  ) %>% 
+  dplyr::select(-Descartados#, -`NA`
+                ) %>% 
+  rename(DSB = CVE_JUR_RES, 'Primer nivel %' = p_primer_nivel, '2-3 nivel %' = p_2_3_nivel) %>% replace(is.na(.), 0) %>% 
+  flextable() %>% autofit()
+```
+
+
+
+
+### Semanas `r paste(epiweek(Sys.Date())-2, epiweek(Sys.Date()), sep = '-')`
+
+```{r, echo=F, warning=F, message=F}
+fmrr_actual %>% 
+  filter(epiweek(FEC_INI_SIGNOS_SINT) %in% (epiweek(Sys.Date())-2):epiweek(Sys.Date())) %>% 
+  count(DES_MPO_RES, DES_LOC_RES, IDE_COL, ESTATUS_CASO) %>% 
+  left_join(
+    fmrr_actual %>% 
+      filter(CVE_DEFUNCION == 1, ESTATUS_CASO == 2) %>%
+      count(DES_MPO_RES, DES_LOC_RES, IDE_COL) %>% 
+      rename(Def = n)
+  ) %>% 
+  arrange(DES_MPO_RES, desc(n)) %>% 
+  pivot_wider(values_from = n, values_fill = 0, names_from = ESTATUS_CASO) %>%
+  left_join(tibble(DES_MPO_RES = NA, `1` = NA, `2` = NA, `3` = NA)) %>% 
+  filter(!is.na(DES_MPO_RES)) %>% 
+  rename(Probables = `1`, Confirmados = `2`, Descartados = `3`) %>% 
+  DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c( -1), 
+                                                 c( 'All'))))  
+```
