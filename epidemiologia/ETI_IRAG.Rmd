@@ -1,0 +1,440 @@
+---
+title: "ENFERMEDADES RESPIRATORIAS VIRALES EN SONORA"
+author: "Abraham Ocejo"
+date: '`r Sys.Date()`'
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(plotly)
+library(flextable)
+library(dplyr)
+library(plotly)
+library(lubridate)
+#library(reactable)
+
+
+sisver <- read_delim('datos/SISVER/epi_070425.txt', delim = '|', locale = locale(encoding = 'latin1'), comment = '', quote = '') %>%
+  filter(ENTRESI == 'SONORA', ORIGEN == 'USMI') %>%
+  #mutate(Semana = epiweek(dmy(FECINISI)),
+   #      Semanad = epiweek(dmy(FECDEF)))
+  mutate(Semana = epiweek(dmy(FECINISI)), Año = year(floor_date(dmy(FECINISI), 'week') + 3),
+         Semanad = epiweek(dmy(FECDEF)), Añod = year(floor_date(dmy(FECDEF), 'week') + 3)) %>% 
+  mutate(semana = paste(Año, '-', str_pad(Semana, pad = '0', side = 'left', width = 2), sep = ''),
+         semanad = paste(Añod, '-', str_pad(Semanad, pad = '0', side = 'left', width = 2), sep = '')
+         ) %>% 
+  mutate(temporada = case_when(
+    epiweek(dmy(FECINISI)) %in% seq(40, 53) ~ paste(year(floor_date(dmy(FECINISI), 'week') + 3), '-', year(floor_date(dmy(FECINISI), 'week') + 3) + 1, sep = ''),
+    epiweek(dmy(FECINISI)) %in% seq(1, 20)  ~ paste(year(floor_date(dmy(FECINISI), 'week') + 3) - 1, '-', year(floor_date(dmy(FECINISI), 'week') + 3), sep = ''),
+    epiweek(dmy(FECINISI)) %in% seq(21, 39) ~ paste('Interestacional ', year(floor_date(dmy(FECINISI), 'week') + 3), sep = '')),
+    temporadad = case_when(
+      epiweek(dmy(FECDEF)) %in% seq(40, 53) ~ paste(year(floor_date(dmy(FECDEF), 'week') + 3), '-', year(floor_date(dmy(FECDEF), 'week') + 3) + 1, sep = ''),
+      epiweek(dmy(FECDEF)) %in% seq(1, 20)  ~ paste(year(floor_date(dmy(FECDEF), 'week') + 3) - 1, '-', year(floor_date(dmy(FECDEF), 'week') + 3), sep = ''),
+      epiweek(dmy(FECDEF)) %in% seq(21, 39) ~ paste('Interestacional ', year(floor_date(dmy(FECDEF), 'week') + 3), sep = ''))
+  )
+
+actual <- paste(year(floor_date(Sys.Date(), 'week') + 3)-1, '-', year(floor_date(Sys.Date(), 'week') + 3), sep = '')
+
+comp <- tibble(semana = paste(c(rep(2024, 52), rep(2025, 52)), '-', str_pad(seq(1,52), pad = '0', width = 2, side = 'left'), sep = ''))
+
+
+ #if (epiweek(floor_date(Sys.Date(), 'week') + 3) %in% seq(41,53)) {
+  #semana <- tibble(semana = c(paste(year(floor_date(Sys.Date(), 'week') + 3), seq(40,53), sep = '-'),
+   #                           paste(year(floor_date(Sys.Date(), 'week') + 3) + 1, str_pad(seq(1,20), pad = '0', side = 'left', width = 2), sep = '-')))
+#} else if (epiweek(floor_date(Sys.Date(), 'week') + 3) %in% seq(1,21)) {
+#  semana <- tibble(semana = c(paste(year(floor_date(Sys.Date(), 'week') + 3) - 1, seq(40,53), sep = '-'),
+                             # paste(year(floor_date(Sys.Date(), 'week') + 3), str_pad(seq(1,20), pad = '0', side = 'left', width = 2), sep = '-')))
+#} else {
+ # semana <- tibble(semana = c(paste(year(floor_date(Sys.Date(), 'week') + 3) - 1, seq(21,39), sep = '-')))
+#}
+
+
+
+#filter(semana %in% semana$semana)
+
+```
+
+## Tabla: Casos confirmados de COVID-19, Influenza y VSR durante el 2024, por semana epidemiológica de inicio de síntomas
+
+```{r, warning=F, echo=F, message=F}
+ CURVA_CONFIRMADOS <- sisver %>% 
+  filter(CLASCOVID19 == 'CONF LAB') %>%
+  mutate(COVID19 = CLASCOVID19 == 'CONF LAB') %>% 
+  count(semana) %>%
+  arrange(semana) %>% rename(COVID19 = n) %>% 
+  full_join(
+    sisver %>%
+      filter(CLASFLU == 'CONF LAB') %>%
+      mutate(INFLUENZA = CLASFLU == 'CONF LAB') %>% 
+      count(semana) %>%
+      arrange(semana) %>% rename(INFLUENZA = n)
+  ) %>%
+  full_join(
+    sisver %>%
+      filter(CLASVSR == 'CONF LAB') %>%
+      mutate(VSR = CLASVSR == 'CONF LAB') %>% 
+      count(semana) %>%
+      arrange(semana) %>% rename(VSR = n)
+  ) %>% 
+  right_join(comp) %>%
+  arrange(semana) %>% 
+  replace(is.na(.), 0)
+
+
+CURVA_CONFIRMADOS%>% 
+DT::datatable(extensions = 'Buttons', rownames = F, 
+                options = list(dom = 'Blfrtip', 
+                               buttons = 'excel', 
+                               lengthMenu = list(c(10, 25, 50, -1), 
+                                                 c(10, 25, 50, 'All'))))
+
+#CURVA_CONFIRMADOS%>%
+      #openxlsx::write.xlsx('C:/Users/Martha/Desktop/COVID/CURVA/CONFIRMADOS.xlsx',
+                       #sheetName = 'CONFIRMADOS',
+                       #append = FALSE,
+                       #overwrite = T)
+```
+
+#### Figura:
+```{r, warning=F, echo=F, message=F}
+CURVA_CONFIRMADOS %>%   
+plot_ly(x = ~semana, y = ~COVID19, name = 'COVID 19', type = 'scatter', mode = 'lines') %>% 
+  add_lines(y = ~INFLUENZA, name = 'Influenza', type = 'scatter', mode = 'lines') %>% 
+  add_lines(y = ~VSR, name = 'VSR', type = 'scatter', mode = 'lines') %>% 
+  layout(title = 'Casos de COVID-19, Influenza y Virus Sinsitial Respiratorio 
+                  por semana de inicio de síntomas en Sonora, 2024',
+         legend = list(x = 1.1, y = 0.9, orientation = "v"),
+         xaxis = list(title = 'Semana epidemiológica de inicio de síntomas',
+                      showgrid = F,
+                      ticks="outside", tick0 = 1, dtick = 1, range = c(0, 1 * max(CURVA_CONFIRMADOS$Semana, na.rm = T)),
+                      zerolinecolor = 'black'),
+         yaxis = list(title = 'Número de casos',
+                      showgrid = F,
+                      ticks="outside", #tickformat = ",d" para redondear, 
+                      zerolinecolor = 'black', 
+                      range = c(0, 1.1 * max(CURVA_CONFIRMADOS[,-1], na.rm = T))
+                      ))
+
+
+```
+
+## Tabla: Casos de ETI e IRAG ocurridos durante el 2024, por semana epimiológica de inicio de síntomas
+```{r, warning=F, echo=F, message=F}
+CURVA_ETI_IRAG <- sisver %>%
+  count(semana, DIAGPROB) %>%
+  pivot_wider(names_from = DIAGPROB, values_from = n, values_fill = 0) %>%
+  right_join(comp) %>% 
+  arrange(semana) %>% 
+  mutate(Total = `ENFERMEDAD TIPO INFLUENZA (ETI)` + `INFECCION RESPIRATORIA AGUDA GRAVE (IRAG)`) %>% 
+  replace(is.na(.), 0)
+ 
+
+CURVA_ETI_IRAG %>% 
+  flextable() %>% autofit()
+
+#CURVA_ETI_IRAG %>%
+#openxlsx::write.xlsx('C:/Users/Martha/Desktop/COVID/CURVA/ETI_IRAG.xlsx', 
+                       #sheetName = 'ETI_IRAG',
+                       #append = TRUE,
+                       #overwrite = T)
+     
+```
+
+#### Figura:
+```{r, warning=F, echo=F, message=F}
+sisver %>%
+  count(semana, DIAGPROB) %>% 
+  arrange(semana) %>% 
+  plot_ly(x = ~semana, y = ~n, color = ~DIAGPROB, type = 'bar') %>%  
+  layout(barmode = 'stack', legend = list(x = 0.5, y = 0.9, orientation = "v"),
+         xaxis = list(title = 'Semana epidemiológica de inicio de síntomas',
+                      showgrid = F,
+                      ticks="outside", tick0 = 1, dtick = 1, range = c(0, 1 * max(CURVA_CONFIRMADOS$Semana, na.rm = T))),
+         yaxis = list(title = 'Número de casos',
+                      showgrid = F,
+                      ticks = 'outside'),
+         title = "Casos de ETI e IRAG ocurridos durante el 2024 en Sonora, 
+                 por semana epidemiológica de inicio de síntomas")
+```
+
+## Tabla: Casos de COVID19, Influenza y VSR ocurridos durante el 2024, por sexo y edad
+
+```{r, warning=F, echo=F, message=F}
+CURVA_SEXO_EDAD <- sisver %>%
+  filter(CLASCOVID19 == 'CONF LAB', temporada == actual) %>%
+  mutate(edad_fac = case_when(
+    EDAD >= 0 & EDAD <= 5    ~ '0 - 5',
+    EDAD >= 6 & EDAD <= 14  ~ '06 - 14',
+    EDAD >= 15 & EDAD <= 24 ~ '15 - 24',
+    EDAD >= 25 & EDAD <= 44 ~ '25 - 44',
+    EDAD >= 45 & EDAD <= 59 ~ '45 - 59',
+    EDAD >= 60                     ~ '60 y más',
+    TRUE ~ NA_character_
+  )) %>%
+  count(SEXO, edad_fac) %>% pivot_wider(names_from = SEXO, values_from = n, values_fill = 0) %>%
+  arrange(edad_fac) %>% rename(GPO_EDAD = edad_fac, FEM_covid19 = FEMENINO, MAS_covid19 = MASCULINO) %>%
+  full_join(
+    sisver %>%
+      filter(CLASFLU == 'CONF LAB', temporada == actual) %>%
+      mutate(edad_fac = case_when(
+        EDAD >= 0 & EDAD <= 5    ~ '0 - 5',
+        EDAD >= 6 & EDAD <= 14  ~ '06 - 14',
+        EDAD >= 15 & EDAD <= 24 ~ '15 - 24',
+        EDAD >= 25 & EDAD <= 44 ~ '25 - 44',
+        EDAD >= 45 & EDAD <= 59 ~ '45 - 59',
+        EDAD >= 60                     ~ '60 y más',
+        TRUE ~ NA_character_
+      )) %>%
+      count(SEXO, edad_fac) %>% pivot_wider(names_from = SEXO, values_from = n, values_fill = 0) %>%
+      arrange(edad_fac) %>% rename(GPO_EDAD = edad_fac, FEM_flu = FEMENINO, MAS_flu = MASCULINO)
+  ) %>%
+  full_join(
+    sisver %>%
+      filter(CLASVSR == 'CONF LAB', temporada == actual) %>%
+      mutate(edad_fac = case_when(
+        EDAD >= 0 & EDAD <= 5    ~ '0 - 5',
+        EDAD >= 6 & EDAD <= 14  ~ '06 - 14',
+        EDAD >= 15 & EDAD <= 24 ~ '15 - 24',
+        EDAD >= 25 & EDAD <= 44 ~ '25 - 44',
+        EDAD >= 45 & EDAD <= 59 ~ '45 - 59',
+        EDAD >= 60                     ~ '60 y más',
+        TRUE ~ NA_character_
+      )) %>%
+      count(SEXO, edad_fac) %>% pivot_wider(names_from = SEXO, values_from = n, values_fill = 0) %>%
+      arrange(edad_fac) %>% rename(GPO_EDAD = edad_fac, FEM_vsr = FEMENINO, MAS_vsr = MASCULINO)  
+  ) %>%
+  replace(is.na(.), 0)
+
+
+CURVA_SEXO_EDAD %>% 
+  flextable() %>% autofit()
+
+#CURVA_SEXO_EDAD %>% 
+#openxlsx::write.xlsx('C:/Users/Martha/Desktop/COVID/CURVA/SEXO_EDAD.xlsx', 
+                       #sheetName = 'SEXO_EDAD',
+                       #append = TRUE)
+                       #overwrite = T)
+
+```
+
+#### Figura:
+
+```{r, warning=F, echo=F, message=F}
+ sisver %>% 
+  filter(CLASCOVID19 == 'CONF LAB') %>%
+  mutate(edad_fac = case_when(
+    EDAD >= 0 & EDAD <= 5    ~ '0 - 5',
+    EDAD >= 6 & EDAD <= 14  ~ '06 - 14',
+    EDAD >= 15 & EDAD <= 24 ~ '15 - 24',
+    EDAD >= 25 & EDAD <= 44 ~ '25 - 44',
+    EDAD >= 45 & EDAD <= 59 ~ '45 - 59',
+    EDAD >= 60                     ~ '60 y más',
+    TRUE ~ NA_character_
+  )) %>% 
+   count(SEXO, edad_fac) %>% 
+  pivot_wider(names_from = SEXO, values_from = n, values_fill = 0) %>% 
+   arrange(edad_fac) %>% 
+   rename(GPO_EDAD = edad_fac) %>% 
+   plot_ly(y = ~GPO_EDAD, x = ~FEMENINO*-1, name= "Femenino", type = 'bar', orientation = "h") %>% 
+  add_trace(x = ~MASCULINO, type = 'bar', name = "Masculino") %>% 
+   layout(barmode = 'overlay', legend = list(x = 1.1, y = 0.9, orientation = "v"),
+          xaxis = list(title = 'Número de casos',
+                       showgrid = F,
+                       ticks = 'outside',
+                       showticklabels = F),
+          yaxis = list(title = 'Grupo de edad',
+                       showgrid = F,
+                       ticks = 'outside',
+                       autorange = 'reversed'),
+          title = "Casos confirmados a COVID-19 por grupo de edad y sexo en Sonora, 2024")  
+   
+```
+
+#### Figura:
+
+```{r, warning=F, echo=F, message=F}
+ sisver %>% 
+   filter(CLASFLU== 'CONF LAB') %>%
+   mutate(edad_fac = case_when(
+     EDAD >= 0 & EDAD <= 5    ~ '0 - 5',
+     EDAD >= 6 & EDAD <= 14  ~ '06 - 14',
+     EDAD >= 15 & EDAD <= 24 ~ '15 - 24',
+     EDAD >= 25 & EDAD <= 44 ~ '25 - 44',
+     EDAD >= 45 & EDAD <= 59 ~ '45 - 59',
+     EDAD >= 60                     ~ '60 y más',
+     TRUE ~ NA_character_
+   )) %>% 
+   count(SEXO, edad_fac) %>% 
+   pivot_wider(names_from = SEXO, values_from = n, values_fill = 0) %>% 
+   arrange(edad_fac) %>% 
+   rename(GPO_EDAD = edad_fac) %>% 
+   plot_ly(y = ~GPO_EDAD, x = ~FEMENINO*-1, name= "Femenino", type = 'bar', orientation = "h") %>% 
+  add_trace(x = ~MASCULINO, type = 'bar', name = "Masculino") %>% 
+   layout(barmode = 'overlay', legend = list(x = 1.1, y = 0.9, orientation = "v"),
+          xaxis = list(title = 'Número de casos',
+                       showgrid = F,
+                       ticks = 'outside',
+                       showticklabels = F),
+          yaxis = list(title = 'Grupo de edad',
+                       showgrid = F,
+                       ticks = 'outside',
+                       autorange = 'reversed'),
+          title = "Casos confirmados a Influenza por grupo de edad y sexo en Sonora, 2024")
+```
+
+#### Figura:
+
+```{r, warning=F, echo=F, message=F}
+ sisver %>% 
+   filter(CLASVSR== 'CONF LAB') %>%
+   mutate(edad_fac = case_when(
+     EDAD >= 0 & EDAD <= 5    ~ '0 - 5',
+     EDAD >= 6 & EDAD <= 14  ~ '06 - 14',
+     EDAD >= 15 & EDAD <= 24 ~ '15 - 24',
+     EDAD >= 25 & EDAD <= 44 ~ '25 - 44',
+     EDAD >= 45 & EDAD <= 59 ~ '45 - 59',
+     EDAD >= 60                     ~ '60 y más',
+     TRUE ~ NA_character_
+   )) %>% 
+   count(SEXO, edad_fac) %>% 
+   pivot_wider(names_from = SEXO, values_from = n, values_fill = 0) %>% 
+   arrange(edad_fac) %>% 
+   rename(GPO_EDAD = edad_fac) %>% 
+   plot_ly(y = ~GPO_EDAD, x = ~FEMENINO*-1, name= "Femenino", type = 'bar', orientation = "h") %>% 
+  add_trace(x = ~MASCULINO, type = 'bar', name = "Masculino") %>% 
+   layout(barmode = 'overlay', legend = list(x = 1.1, y = 0.9, orientation = "v"),
+          xaxis = list(title = 'Número de casos',
+                       showgrid = F,
+                       ticks = 'outside',
+                       showticklabels = F),
+          yaxis = list(title = 'Grupo de edad',
+                       showgrid = F,
+                       ticks = 'outside',
+                       autorange = 'reversed'),
+          title = "Casos confirmados a VSR por grupo de edad y sexo en Sonora, 2024") 
+```
+  
+## Tabla: Pacientes en UCI debido a una IRAG con ventilación mecánica asistida (VMA)
+
+```{r, warning=F, echo=F, message=F}
+CURVA_UCI_VMA <- sisver %>%
+   filter(UCI == 'SI') %>%
+   count(semana, INTUBADO) %>%
+   pivot_wider(names_from = INTUBADO, values_from = n, values_fill = 0) %>%
+  right_join(comp) %>% 
+   arrange(semana) %>% rename('CON VMA' = SI, 'SIN VMA' = NO) %>% 
+  replace(is.na(.), 0)
+ 
+CURVA_UCI_VMA %>% 
+  flextable() %>% autofit() 
+  
+#CURVA_UCI_VMA %>%  
+#openxlsx::write.xlsx('C:/Users/Martha/Desktop/COVID/CURVA/UCI_VMA.xlsx', 
+                       #sheetName = 'UCI_VMA',
+                       #append = TRUE)
+                       #overwrite = T)
+
+```
+
+#### Figura:
+```{r, warning=F, echo=F, message=F}
+ sisver %>%
+   filter(UCI == 'SI') %>%
+  mutate(INTUBADO = case_when(
+    INTUBADO == 'SI' ~ 'CON VMA',
+    INTUBADO == 'NO' ~ 'SIN VMA',
+    T ~ NA
+  )) %>% count(semana, INTUBADO) %>% 
+   plot_ly(x = ~semana, y = ~n, color = ~INTUBADO, type = 'bar') %>% 
+   layout(barmode = 'stack', legend = list(x = 1.1, y = 0.9, orientation = "v"),
+          xaxis = list(title = 'Semana epidemiológica de inicio de síntomas',
+                       showgrid = F, 
+                       ticks="outside", tick0 = 1, dtick = 1), #range = c(0, 1 * max(CURVA_UCI_VMA$Semana, na.rm = T))),
+          yaxis = list(title = 'Número de casos',
+                       showgrid = F),
+          title = "Pacientes en UCI debido a una IRAG por VMA en Sonora, 2024")
+``` 
+
+## Tabla: Casos fatales y no fatales de pacientes hospitalizados por una IRAG durante el 2024
+
+```{r, warning=F, echo=F, message=F}
+
+CURVA_DEFUNCIONES <- sisver %>%
+   filter(TIPACIEN == 'HOSPITALIZADO') %>%
+   mutate(EVOLUCI = case_when(
+     EVOLUCI == 'DEFUNCION' ~ 'Fatales',
+     T ~ 'No fatales'
+   )) %>% 
+  filter(EVOLUCI == 'Fatales') %>% 
+   count(semanad) %>% rename(semana = semanad, Fatales = n) %>% 
+  full_join(
+    sisver %>%
+   filter(TIPACIEN == 'HOSPITALIZADO') %>%
+   mutate(EVOLUCI = case_when(
+     EVOLUCI == 'DEFUNCION' ~ 'Fatales',
+     T ~ 'No fatales'
+   )) %>% 
+  filter(EVOLUCI == 'No fatales') %>%
+    count(semana) %>% rename('No fatales' = n)
+  ) %>% 
+  right_join(comp) %>% 
+   select(semana, Fatales, `No fatales`) %>%
+   arrange(semana) %>% 
+  replace(is.na(.), 0)
+
+
+CURVA_DEFUNCIONES %>% 
+  flextable() %>% autofit() 
+
+  
+#CURVA_DEFUNCIONES %>%   
+#openxlsx::write.xlsx('C:/Users/Martha/Desktop/COVID/CURVA/DEFUNCIONES.xlsx', 
+                       #sheetName = 'DEFUNCIONES',
+                       #append = TRUE)
+                       #overwrite = T)
+
+```
+
+#### Figura:
+
+```{r, warning=F, echo=F, message=F}
+sisver %>% 
+   filter(TIPACIEN == 'HOSPITALIZADO') %>%
+   mutate(EVOLUCI = case_when(
+     #EVOLUCI == 'ALTA - MEJORIA' ~ 'No fatales',
+     #EVOLUCI == 'ALTA - TRASLADO' ~ 'No fatales',
+     #EVOLUCI == 'ALTA - VOLUNTARIA' ~ 'No fatales',
+     #EVOLUCI == 'ALTA - CURACION' ~ 'No fatales',
+     #EVOLUCI == 'CASO NO GRAVE' ~ 'No fatales',
+     #EVOLUCI == 'CASO GRAVE -' ~ 'No fatales',
+     EVOLUCI == 'DEFUNCION' ~ 'Fatales',
+     T ~ 'No fatales'
+   )) %>% 
+  count(semana, EVOLUCI) %>%   
+plot_ly(x= ~semana, y= ~n, color = ~EVOLUCI, type = 'bar') %>% 
+  layout(barmode = 'stack', legend = list(x = 1.1, y = 0.9, orientation = "v"),
+         xaxis = list(title = 'Semana epidemiológica de inicio de síntomas',
+                      showgrid = F, dtick= 1),
+         yaxis = list(title = 'Número de casos',
+                      showgrid = F),
+         title = "Casos hospitalizados fatales y no fatales 
+                        debido a IRAG en Sonora, 2024")
+
+
+
+list(CONFIRMADOS = CURVA_CONFIRMADOS, 
+     ETI_IRAG = CURVA_ETI_IRAG, 
+     SEXO_EDAD = CURVA_SEXO_EDAD, 
+     UCI_VMA= CURVA_UCI_VMA,
+     DEFUNCIONES = CURVA_DEFUNCIONES) %>% 
+  
+  openxlsx::write.xlsx('datos/SISVER/CURVA/CURVA_ETI_IRAG.xlsx', 
+                       overwrite = T)
+
+
+
+```
