@@ -1,0 +1,166 @@
+---
+title: "SISVER summary"
+author: "Abraham Ocejo"
+date: 'today'
+format: html
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(flextable)
+
+sisver <- read_delim(paste('datos/SISVER/epi_', format(floor_date(Sys.Date(), 'week') + 1, '%d%m%y'), '.txt', sep = ''), delim = '|', comment = '', quote = '', locale = locale(encoding = 'latin1')) %>% bind_rows(read_delim('datos/SISVER/epi_2023.txt', delim = '|', comment = '', quote = '', locale = locale(encoding = 'latin1')) 
+     ) %>% filter(ENTRESI == 'SONORA', ORIGEN == 'USMI') %>% mutate(semana = paste(year(floor_date(dmy(FECINISI), 'week') + 3), str_pad(epiweek(floor_date(dmy(FECINISI), 'week') + 3), width = 2, pad = '0'), sep = '-'), semanad = paste(year(floor_date(dmy(FECDEF), 'week') + 3), str_pad(epiweek(floor_date(dmy(FECDEF), 'week') + 3), width = 2, pad = '0'), sep = '-'), año = year(dmy(FECINISI)), añod = year(dmy(FECDEF)), week = epiweek(dmy(FECINISI)), weekd = epiweek(dmy(FECDEF)), temporada = case_when(
+  epiweek(dmy(FECINISI)) %in% seq(21,39) ~ paste('Interestacional ', year(dmy(FECINISI)), sep = ''),
+  epiweek(dmy(FECINISI)) %in% seq(40,53) ~ paste('Estacional ', year(floor_date(dmy(FECINISI), 'week') + 3), '-', year(floor_date(dmy(FECINISI), 'week') + 3) + 1, sep = ''),
+  epiweek(dmy(FECINISI)) %in% seq(1,20) ~ paste('Estacional ', year(floor_date(dmy(FECINISI), 'week') + 3) - 1, '-', year(floor_date(dmy(FECINISI), 'week') + 3), sep = ''), 
+  T ~ NA
+), temporadad = case_when(
+  epiweek(dmy(FECDEF)) %in% seq(21,39) ~ paste('Interestacional ', year(dmy(FECDEF)), sep = ''),
+  epiweek(dmy(FECDEF)) %in% seq(40,53) ~ paste('Estacional ', year(floor_date(dmy(FECDEF), 'week') + 3), '-', year(floor_date(dmy(FECDEF), 'week') + 3) + 1, sep = ''),
+  epiweek(dmy(FECDEF)) %in% seq(1,20) ~ paste('Estacional ', year(floor_date(dmy(FECDEF), 'week') + 3) - 1, '-', year(floor_date(dmy(FECDEF), 'week') + 3), sep = ''), 
+  T ~ NA
+))
+
+
+```
+
+Tabla de COVID e Influenza
+
+```{r, warning=F, echo=F, message=F}
+tibble(Padecimiento = 'COVID-19',
+  
+'Casos 2024' = sisver %>% filter(año == year(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB') %>% nrow(),
+'Defunciones 2024' = sisver %>% filter(añod == year(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+'Casos SE 2024' = sisver %>% filter(año == year(Sys.Date()) - 1, week == epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB') %>% nrow(), 
+'Defunciones SE 2024' = sisver %>% filter(añod == year(Sys.Date()) - 1, weekd == epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+'Casos SE 2025' = sisver %>% filter(año == year(Sys.Date()), week == epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB') %>% nrow(), 
+'Defunciones SE 2025' = sisver %>% filter(añod == year(Sys.Date()),weekd == epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+'Casos acumulados 2024' = sisver %>% filter(año == year(Sys.Date()) - 1, week <= epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB') %>% nrow(), 
+'Defunciones acumuladas 2024' = sisver %>% filter(añod == year(Sys.Date()) - 1, weekd <= epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+'Casos acumulados 2025' = sisver %>% filter(año == year(Sys.Date()), week <= epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB') %>% nrow(), 
+'Defunciones acumuladas 2025' = sisver %>% filter(añod == year(Sys.Date()), weekd <= epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow()
+) %>% 
+  rbind(
+  tibble(Padecimiento = 'Influenza',
+'Casos 2024' = sisver %>% filter(año == year(Sys.Date()) - 1, CLASFLU == 'CONF LAB') %>% nrow(),
+'Defunciones 2024' = sisver %>% filter(añod == year(Sys.Date()) - 1, CLASFLU == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+'Casos SE 2024' = sisver %>% filter(año == year(Sys.Date()) - 1, week == epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB') %>% nrow(), 
+'Defunciones SE 2024' = sisver %>% filter(añod == year(Sys.Date()) - 1, weekd == epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+'Casos SE 2025' = sisver %>% filter(año == year(Sys.Date()), week == epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB') %>% nrow(), 
+'Defunciones SE 2025'  = sisver %>% filter(añod == year(Sys.Date()),weekd == epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+'Casos acumulados 2024' = sisver %>% filter(año == year(Sys.Date()) - 1, week <= epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB') %>% nrow(), 
+'Defunciones acumuladas 2024' = sisver %>% filter(añod == year(Sys.Date()) - 1, weekd <= epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+'Casos acumulados 2025' = sisver %>% filter(año == year(Sys.Date()), week <= epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB') %>% nrow(), 
+'Defunciones acumuladas 2025' = sisver %>% filter(añod == year(Sys.Date()), weekd <= epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow()
+)
+) %>% flextable() %>% autofit()
+
+```
+
+
+
+Por temporada `r if ((epiweek(Sys.Date()) - 1) %in% seq(21,39)) {paste('interestacional ', year(Sys.Date()), sep = '')} else if (epiweek(Sys.Date()) >= 40){ paste('estacional ', year(Sys.Date()), '-', year(Sys.Date()) + 1, sep = '')} else {paste('estacional ', year(Sys.Date()) - 1, '-', year(Sys.Date()), sep = '')}`
+
+
+```{r, warning=F, echo=F, message=F}
+if (epiweek(Sys.Date()) %in% seq(21,40)){
+  sisver <- sisver %>% filter(str_detect(temporada, pattern = 'Interestacional') | str_detect(temporadad, pattern = 'Interestacional'))
+  
+  tibble(Padecimiento = 'COVID-19',
+  'Casos 2024' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date())-1)), CLASCOVID19 == 'CONF LAB') %>% nrow(),
+  'Defunciones 2024' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date())-1)), CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+  'Casos SE 2024' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date())-1)), week == epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB') %>% nrow(), 
+  'Defunciones SE 2024' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date())-1)), weekd == epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(),
+  
+  'Casos SE 2025' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date()))), week == epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB') %>% nrow(), 
+  'Defunciones SE 2025' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date()))),weekd == epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+  
+  'Casos acumulados 2024' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date())-1)), week <= epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB') %>% nrow(), 
+  'Defunciones acumuladas 2024' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date())-1)), weekd <= epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+  'Casos acumulados 2025' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date()))), week <= epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB') %>% nrow(), 
+  'Defunciones acumuladas 2025' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date()))), weekd <= epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow()
+) %>% rbind(
+  tibble(Padecimiento = 'Influenza',
+  'Casos 2024' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date())-1)), CLASFLU == 'CONF LAB') %>% nrow(),
+  'Defunciones 2024' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date())-1)), CLASFLU == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+  'Casos SE 2024' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date())-1)), week == epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB') %>% nrow(), 
+  'Defunciones SE 2024' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date())-1)), weekd == epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(),
+  
+  'Casos SE 2025' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date()))), week == epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB') %>% nrow(), 
+  'Defunciones SE 2025' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date()))),weekd == epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+  
+  'Casos acumulados 2024' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date())-1)), week <= epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB') %>% nrow(), 
+  'Defunciones acumuladas 2024' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date())-1)), weekd <= epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+  'Casos acumulados 2025' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date()))), week <= epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB') %>% nrow(), 
+  'Defunciones acumuladas 2025' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date()))), weekd <= epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow()
+)
+) %>% flextable() %>% autofit()
+} else if (epiweek(Sys.Date()) %in% seq(41,53)){
+  sisver <- sisver %>% filter(str_detect(temporada, pattern = 'Estacional') | str_detect(temporadad, pattern = 'Estacional'))
+  
+  tibble(Padecimiento = 'COVID-19',
+  'Casos 2024' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date())-1, '-', sep = '')), CLASCOVID19 == 'CONF LAB') %>% nrow(),
+  'Defunciones 2024' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date())-1, '-', sep = '')), CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+  'Casos SE 2024' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date())-1, '-', sep = '')), week == epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB') %>% nrow(), 
+  'Defunciones SE 2024' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date())-1, '-', sep = '')), weekd == epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(),
+  
+  'Casos SE 2025' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date()), '-', sep = '')), week == epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB') %>% nrow(), 
+  'Defunciones SE 2025' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date()), '-', sep = '')),weekd == epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+  
+  'Casos acumulados 2024' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date())-1, '-', sep = '')), week <= epiweek(Sys.Date()) - 1 & !week %in% seq(1,20), CLASCOVID19 == 'CONF LAB') %>% nrow(), 
+  'Defunciones acumuladas 2024' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date())-1, '-', sep = '')), weekd <= epiweek(Sys.Date()) - 1  & !week %in% seq(1,20), CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+  'Casos acumulados 2025' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date()), '-', sep = '')), week <= epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB') %>% nrow(), 
+  'Defunciones acumuladas 2025' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date()), '-', sep = '')), weekd <= epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow()
+) %>% rbind(
+  tibble(Padecimiento = 'Influenza',
+  'Casos 2024' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date())-1, '-', sep = '')), CLASFLU == 'CONF LAB') %>% nrow(),
+  'Defunciones 2024' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date())-1, '-', sep = '')), CLASFLU == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+  'Casos SE 2024' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date())-1, '-', sep = '')), week == epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB') %>% nrow(), 
+  'Defunciones SE 2024' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date())-1, '-', sep = '')), weekd == epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(),
+  
+  'Casos SE 2025' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date()), '-', sep = '')), week == epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB') %>% nrow(), 
+  'Defunciones SE 2025' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date()), '-', sep = '')),weekd == epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+  
+  'Casos acumulados 2024' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date())-1, '-', sep = '')), week <= epiweek(Sys.Date()) - 1 & !week %in% seq(1,20), CLASFLU == 'CONF LAB') %>% nrow(), 
+  'Defunciones acumuladas 2024' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date())-1, '-', sep = '')), weekd <= epiweek(Sys.Date()) - 1 & !week %in% seq(1,20), CLASFLU == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+  'Casos acumulados 2025' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date()), '-', sep = '')), week <= epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB') %>% nrow(), 
+  'Defunciones acumuladas 2025' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date()), '-', sep = '')), weekd <= epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow()
+)
+) %>% flextable() %>% autofit()
+} else {
+  sisver <- sisver %>% filter(str_detect(temporada, pattern = 'Estacional') | str_detect(temporadad, pattern = 'Estacional'))
+  tibble(Padecimiento = 'COVID-19',
+  'Casos 2024' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date())-2)), CLASCOVID19 == 'CONF LAB') %>% nrow(),
+  'Defunciones 2024' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date())-2)), CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+  'Casos SE 2024' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date())-2)), week == epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB') %>% nrow(), 
+  'Defunciones SE 2024' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date())-2)), weekd == epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(),
+  
+  'Casos SE 2025' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date()))), week == epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB') %>% nrow(), 
+  'Defunciones SE 2025' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date()))),weekd == epiweek(Sys.Date()) - 1, CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+  
+  'Casos acumulados 2024' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date())-2)), week %in% c(seq(1,epiweek(Sys.Date()) - 1), seq(40,53)), CLASCOVID19 == 'CONF LAB') %>% nrow(), 
+  'Defunciones acumuladas 2024' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date())-2)), weekd %in% c(seq(1,epiweek(Sys.Date()) - 1), seq(40,53)), CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+  'Casos acumulados 2025' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date()))), week %in% c(seq(1,epiweek(Sys.Date()) - 1), seq(40,53)), CLASCOVID19 == 'CONF LAB') %>% nrow(), 
+  'Defunciones acumuladas 2025' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date()))), weekd %in% c(seq(1,epiweek(Sys.Date()) - 1), seq(40,53)), CLASCOVID19 == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow()
+) %>% rbind(
+  tibble(Padecimiento = 'Influenza',
+  'Casos 2024' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date())-2)), CLASFLU == 'CONF LAB') %>% nrow(),
+  'Defunciones 2024' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date())-2)), CLASFLU == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+  'Casos SE 2024' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date())-2)), week == epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB') %>% nrow(), 
+  'Defunciones SE 2024' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date())-2)), weekd == epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(),
+  
+  'Casos SE 2025' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date()))), week == epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB') %>% nrow(), 
+  'Defunciones SE 2025' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date()))),weekd == epiweek(Sys.Date()) - 1, CLASFLU == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+  
+  'Casos acumulados 2024' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date())-2)), week %in% c(seq(1,epiweek(Sys.Date()) - 1), seq(40,53)), CLASFLU == 'CONF LAB') %>% nrow(), 
+  'Defunciones acumuladas 2024' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date())-2)), weekd %in% c(seq(1,epiweek(Sys.Date()) - 1), seq(40,53)), CLASFLU == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow(), 
+  'Casos acumulados 2025' = sisver %>% filter(str_detect(temporada, pattern = paste(year(Sys.Date()))), week %in% c(seq(1,epiweek(Sys.Date()) - 1), seq(40,53)), CLASFLU == 'CONF LAB') %>% nrow(), 
+  'Defunciones acumuladas 2025' = sisver %>% filter(str_detect(temporadad, pattern = paste(year(Sys.Date()))), weekd %in% c(seq(1,epiweek(Sys.Date()) - 1), seq(40,53)), CLASFLU == 'CONF LAB', EVOLUCI == 'DEFUNCION') %>% nrow()
+)
+) %>% flextable() %>% autofit()
+}
+```
+
