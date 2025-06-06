@@ -150,8 +150,8 @@ epochTime <- function() {
 
 ## UI ##
 ui <- dashboardPage(skin = 'red',
-                    dashboardHeader(title = 'ACCIONES EXTRAMUROS'),
-                    dashboardSidebar(
+                    dashboardHeader(title = 'ACCIONES EXTRAMUROS', titleWidth = '100%'),
+                    dashboardSidebar(disable = T,
                       sidebarMenu(
                       #  menuItem("Ectodesparasitación", tabName = "ecto", icon = icon("vial-virus", lib = "font-awesome")),
                       #  menuItem("Entomología", tabName = "ento", icon = icon("bug", lib = "font-awesome")),
@@ -193,7 +193,7 @@ ui <- dashboardPage(skin = 'red',
                                     id = "form",
                                     h3(tags$b('Máscara de captura para monitoreo de acciones extramuros')),
                                     fluidRow(
-                                      column(10, 
+                                      column(12, 
                                     selectInput(inputId = 'AREA', 
                                                    label = 'Selecciona el área de captura:',
                                                    choices = respuestas %>% select(AREA_CAPTURA) %>% filter(!is.na(AREA_CAPTURA)), 
