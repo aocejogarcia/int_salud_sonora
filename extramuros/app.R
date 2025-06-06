@@ -23,6 +23,16 @@ library(dplyr)
 catalogo <- readRDS('catalogo.rds')
 respuestas <- readRDS('opcion_multiple.rds')
 
+catalogo <- catalogo %>% mutate(DISTRITO = case_when(
+  MUN %in% c('001', '005', '008', '009', '013', '014', '020', '021', '023', '024', '028', '030', '032', '034', '037',
+                 '038', '040', '041', '044', '045', '050', '052', '053', '054', '056', '057', '061', '062', '063', '066', '067', '068') ~ 'Distrito de Salud para el Bienestar 1',
+  MUN %in% c('004', '007', '017', '046', '047', '060', '065') ~ 'Distrito de Salud para el Bienestar 2',
+  MUN %in% c('002', '006', '010', '011', '015', '016', '019', '022', '027', '031', '035', '036', '039', '043', '058', '059', '064') ~ 'Distrito de Salud para el Bienestar 3',
+  MUN %in% c('012', '018', '025', '029', '049', '051', '069', '072') ~ 'Distrito de Salud para el Bienestar 4',
+  MUN %in% c('003', '026', '033', '042', '071') ~ 'Distrito de Salud para el Bienestar 5',
+  MUN %in% c('048', '055', '070') ~ 'Distrito de Salud para el Bienestar 6',
+  T ~ MUN))
+
 #loadData <- function() {
 #  files <- list.files(file.path(responsesDir), full.names = TRUE)
 #  data <- lapply(files, read.csv, stringsAsFactors = FALSE)
@@ -198,7 +208,7 @@ ui <- dashboardPage(skin = 'red',
                                               language = 'es'),
                                     selectInput(inputId = 'DISTRITO', 
                                                 label = 'Distrito de Salud donde se realizaron las acciones:',
-                                                choices = respuestas %>% select(DISTRITO) %>% filter(!is.na(DISTRITO)), 
+                                                choices = sort(unique(catalogo$DISTRITO)), 
                                                 selected = '')
                                     )),
                                     column(4, wellPanel(
@@ -1228,6 +1238,17 @@ server <- function(input, output, session) {
       write.csv(loadData(), file, row.names = FALSE)
     }
   )
+  
+  observeEvent(input$DISTRITO, {
+    distritos <- catalogo
+    
+    updateSelectInput(session = session,
+                      inputId = 'MUNICIPIO',
+                      label = 'Seleccione municipio',
+                      choices = unique(distritos$NOM_MUN[distritos$DISTRITO == input$DISTRITO]),
+                      selected = '')
+    
+  })
   
   observeEvent(input$MUNICIPIO, {
     municipios <- catalogo
