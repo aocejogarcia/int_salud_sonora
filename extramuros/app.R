@@ -89,57 +89,13 @@ appCSS <-
    #error { color: red; }"
 
 
-fieldsAll <- c('AREA',	'FECHA',	'MUNICIPIO', 	'LOCALIDAD',	'MOTIVO',	'TIPO',	'con_fem_m1',	'con_fem_1_4',	'con_fem_5_14',	'con_fem_15_24',	'con_fem_25_44',	'con_fem_45_64',	'con_fem_65mas',
-'con_mas_m1',	'con_mas_1_4',	'con_mas_5_14',	'con_mas_15_24',	'con_mas_25_44',	'con_mas_45_64',	'con_mas_65mas',	'con_fem_nino_m1',	'con_fem_nino_1_4',	'con_fem_nino_5_14',
-'con_mas_nino_m1',	'con_mas_nino_1_4',	'con_mas_nino_5_14',	'ansi_fem_5_14',	'ansi_fem_15_24',	'ansi_fem_25_44',	'ansi_fem_45_64',	'ansi_fem_65mas',	'ansi_mas_5_14',	'ansi_mas_15_24',	'ansi_mas_25_44',
-'ansi_mas_45_64',	'ansi_mas_65mas',	'depre_fem_5_14',	'depre_fem_15_24',	'depre_fem_25_44',	'depre_fem_45_64',	'depre_fem_65mas',	'depre_mas_5_14',	'depre_mas_15_24',	'depre_mas_25_44',	'depre_mas_45_64',
-'depre_mas_65mas',	'viol_4_14',	'viol_15_24',	'viol_25_44',	'viol_45_64',	'viol_65mas',	'adic_fem_m1',	'adic_fem_1_4',	'adic_fem_5_14',	'adic_fem_15_24',	'adic_fem_25_44',	'adic_fem_45_64',	'adic_fem_65mas',
-'adic_mas_m1',	'adic_mas_1_4',	'adic_mas_5_14',	'adic_mas_15_24',	'adic_mas_25_44',	'adic_mas_45_64',	'adic_mas_65mas',	'exvis_fem_m1',	'exvis_fem_1_4',	'exvis_fem_5_14',	'exvis_fem_15_24',	'exvis_fem_25_44',
-'exvis_fem_45_64',	'exvis_fem_65mas',	'exvis_mas_m1',	'exvis_mas_1_4',	'exvis_mas_5_14',	'exvis_mas_15_24',	'exvis_mas_25_44',	'exvis_mas_45_64',	'exvis_mas_65mas',	'det_enf_cronica',	'envej_fem_45_64',
-'envej_fem_65mas',	'envej_mas_45_64',	'envej_mas_65mas',	'vih_fem_m1',	'vih_fem_1_4',	'vih_fem_5_14',	'vih_fem_15_24',	'vih_fem_25_44',	'vih_fem_45_64',	'vih_fem_65mas',	'vih_mas_m1',	'vih_mas_1_4',
-'vih_mas_5_14',	'vih_mas_15_24',	'vih_mas_25_44',	'vih_mas_45_64',	'vih_mas_65mas',	'sifi_fem_m1',	'sifi_fem_1_4',	'sifi_fem_5_14',	'sifi_fem_15_24',	'sifi_fem_25_44',	'sifi_fem_45_64',	'sifi_fem_65mas',
-'sifi_mas_m1',	'sifi_mas_1_4',	'sifi_mas_5_14',	'sifi_mas_15_24',	'sifi_mas_25_44',	'sifi_mas_45_64',	'sifi_mas_65mas',	'hepc_fem_m1',	'hepc_fem_1_4',	'hepc_fem_5_14',	'hepc_fem_15_24',	'hepc_fem_25_44',
-'hepc_fem_45_64',	'hepc_fem_65mas',	'hepc_mas_m1',	'hepc_mas_1_4',	'hepc_mas_5_14',	'hepc_mas_15_24',	'hepc_mas_25_44',	'hepc_mas_45_64',	'hepc_mas_65mas',	'citologias',	'vph_25_44',	'vph_45_64',	'exploraciones',
-'gluc_fem_m1',	'gluc_fem_1_4',	'gluc_fem_5_14',	'gluc_fem_15_24',	'gluc_fem_25_44',	'gluc_fem_45_64',	'gluc_fem_65mas',	'gluc_mas_m1',	'gluc_mas_1_4',	'gluc_mas_5_14',	'gluc_mas_15_24',	'gluc_mas_25_44',
-'gluc_mas_45_64',	'gluc_mas_65mas',	'tamiz_fem_m1',	'tamiz_fem_1_4',	'tamiz_fem_5_14',	'tamiz_fem_15_24',	'tamiz_fem_25_44',	'tamiz_fem_45_64',	'tamiz_fem_65mas',	'tamiz_mas_m1',	'tamiz_mas_1_4',	'tamiz_mas_5_14',
-'tamiz_mas_15_24',	'tamiz_mas_25_44',	'tamiz_mas_45_64',	'tamiz_mas_65mas',	'epi_fem_m1',	'epi_fem_1_4',	'epi_fem_5_14',	'epi_fem_15_24',	'epi_fem_25_44',	'epi_fem_45_64',	'epi_fem_65mas',	'epi_mas_m1',
-'epi_mas_1_4',	'epi_mas_5_14',	'epi_mas_15_24',	'epi_mas_25_44',	'epi_mas_45_64',	'epi_mas_65mas',	'colera_fem_m1',	'colera_fem_1_4',	'colera_fem_5_14',	'colera_fem_15_24',	'colera_fem_25_44',	'colera_fem_45_64',
-'colera_fem_65mas',	'colera_mas_m1',	'colera_mas_1_4',	'colera_mas_5_14',	'colera_mas_15_24',	'colera_mas_25_44',	'colera_mas_45_64',	'colera_mas_65mas',	'migrantes',	'indigenas',	'negocios_visi',	'escuelas_visi',
-'iglesias_visi',	'lid_vecinal_visi',	'cas_promo',	'cas_ausentes',	'cas_renuen',	'cas_deshab',	'c_rehab',	'ceresos',	'campo_agri',	'albergue_migra',	'albergue_otro',	'caf_visita',	'mat_entrega',	'vso_entrega',
-'p_ext_entrega',	'p_int_entrega',	'lubri_entrega',	'mecanismo',	'tematica',	'p_sensibilizadas',	'ester_cani_m',	'ester_cani_h',	'ester_feli_m',	'ester_feli_h',	'vac_cani_m',	'vac_cani_h',	'vac_feli_m',	'vac_feli_h',
-'desp_cani_m',	'desp_cani_h',	'desp_feli_m',	'desp_feli_h',	'cont_larvario',	'recipientes_rev',	'cant_insect',	'p_ssani',	'p_ecobuq',	'casas_sanea',	'vac_vph_fem_m1',	'vac_vph_fem_1_4',	'vac_vph_fem_5_14',
-'vac_vph_fem_15_24',	'vac_vph_fem_25_44',	'vac_vph_fem_45_64',	'vac_vph_fem_65mas',	'vac_vph_mas_m1',	'vac_vph_mas_1_4',	'vac_vph_mas_5_14',	'vac_vph_mas_15_24',	'vac_vph_mas_25_44',	'vac_vph_mas_45_64',
-'vac_vph_mas_65mas',	'vactot_vph_mas_m1',	'vactot_vph_mas_1_4',	'vactot_vph_mas_5_14',	'vactot_vph_mas_15_24',	'vactot_vph_mas_25_44',	'vactot_vph_mas_45_64',	'vactot_vph_mas_65mas',	'vac_cov_fem_m1',
-'vac_cov_fem_1_4',	'vac_cov_fem_5_14',	'vac_cov_fem_15_24',	'vac_cov_fem_25_44',	'vac_cov_fem_45_64',	'vac_cov_fem_65mas',	'vac_cov_mas_m1',	'vac_cov_mas_1_4',	'vac_cov_mas_5_14',	'vac_cov_mas_15_24',
-'vac_cov_mas_25_44',	'vac_cov_mas_45_64',	'vac_cov_mas_65mas',	'vactot_cov_mas_m1',	'vactot_cov_mas_1_4',	'vactot_cov_mas_5_14',	'vactot_cov_mas_15_24',	'vactot_cov_mas_25_44',	'vactot_cov_mas_45_64',
-'vactot_cov_mas_65mas',	'vac_hepab_fem_m1',	'vac_hepab_fem_1_4',	'vac_hepab_fem_5_14',	'vac_hepab_fem_15_24',	'vac_hepab_fem_25_44',	'vac_hepab_fem_45_64',	'vac_hepab_fem_65mas',	'vac_hepab_mas_m1',
-'vac_hepab_mas_1_4',	'vac_hepab_mas_5_14',	'vac_hepab_mas_15_24',	'vac_hepab_mas_25_44',	'vac_hepab_mas_45_64',	'vac_hepab_mas_65mas',	'vactot_hepab_mas_m1',	'vactot_hepab_mas_1_4',	'vactot_hepab_mas_5_14',
-'vactot_hepab_mas_15_24',	'vactot_hepab_mas_25_44',	'vactot_hepab_mas_45_64',	'vactot_hepab_mas_65mas',	'vac_flu_fem_m1',	'vac_flu_fem_1_4',	'vac_flu_fem_5_14',	'vac_flu_fem_15_24',	'vac_flu_fem_25_44',
-'vac_flu_fem_45_64',	'vac_flu_fem_65mas',	'vac_flu_mas_m1',	'vac_flu_mas_1_4',	'vac_flu_mas_5_14',	'vac_flu_mas_15_24',	'vac_flu_mas_25_44',	'vac_flu_mas_45_64',	'vac_flu_mas_65mas',	'vactot_flu_mas_m1',
-'vactot_flu_mas_1_4',	'vactot_flu_mas_5_14',	'vactot_flu_mas_15_24',	'vactot_flu_mas_25_44',	'vactot_flu_mas_45_64',	'vactot_flu_mas_65mas',	'vac_hexa_fem_m1',	'vac_hexa_fem_1_4',	'vac_hexa_fem_5_14',
-'vac_hexa_fem_15_24',	'vac_hexa_fem_25_44',	'vac_hexa_fem_45_64',	'vac_hexa_fem_65mas',	'vac_hexa_mas_m1',	'vac_hexa_mas_1_4',	'vac_hexa_mas_5_14',	'vac_hexa_mas_15_24',	'vac_hexa_mas_25_44',	'vac_hexa_mas_45_64',
-'vac_hexa_mas_65mas',	'vactot_hexa_mas_m1',	'vactot_hexa_mas_1_4',	'vactot_hexa_mas_5_14',	'vactot_hexa_mas_15_24',	'vactot_hexa_mas_25_44',	'vactot_hexa_mas_45_64',	'vactot_hexa_mas_65mas',	'vac_rota_fem_m1',
-'vac_rota_fem_1_4',	'vac_rota_fem_5_14',	'vac_rota_fem_15_24',	'vac_rota_fem_25_44',	'vac_rota_fem_45_64',	'vac_rota_fem_65mas',	'vac_rota_mas_m1',	'vac_rota_mas_1_4',	'vac_rota_mas_5_14',	'vac_rota_mas_15_24',
-'vac_rota_mas_25_44',	'vac_rota_mas_45_64',	'vac_rota_mas_65mas',	'vactot_rota_mas_m1',	'vactot_rota_mas_1_4',	'vactot_rota_mas_5_14',	'vactot_rota_mas_15_24',	'vactot_rota_mas_25_44',	'vactot_rota_mas_45_64',
-'vactot_rota_mas_65mas',	'vac_neu23_fem_m1',	'vac_neu23_fem_1_4',	'vac_neu23_fem_5_14',	'vac_neu23_fem_15_24',	'vac_neu23_fem_25_44',	'vac_neu23_fem_45_64',	'vac_neu23_fem_65mas',	'vac_neu23_mas_m1',
-'vac_neu23_mas_1_4',	'vac_neu23_mas_5_14',	'vac_neu23_mas_15_24',	'vac_neu23_mas_25_44',	'vac_neu23_mas_45_64',	'vac_neu23_mas_65mas',	'vactot_neu23_mas_m1',	'vactot_neu23_mas_1_4',	'vactot_neu23_mas_5_14',
-'vactot_neu23_mas_15_24',	'vactot_neu23_mas_25_44',	'vactot_neu23_mas_45_64',	'vactot_neu23_mas_65mas',	'vac_srp_fem_m1',	'vac_srp_fem_1_4',	'vac_srp_fem_5_14',	'vac_srp_fem_15_24',	'vac_srp_fem_25_44',
-'vac_srp_fem_45_64',	'vac_srp_fem_65mas',	'vac_srp_mas_m1',	'vac_srp_mas_1_4',	'vac_srp_mas_5_14',	'vac_srp_mas_15_24',	'vac_srp_mas_25_44',	'vac_srp_mas_45_64',	'vac_srp_mas_65mas',	'vactot_srp_mas_m1',
-'vactot_srp_mas_1_4',	'vactot_srp_mas_5_14',	'vactot_srp_mas_15_24',	'vactot_srp_mas_25_44',	'vactot_srp_mas_45_64',	'vactot_srp_mas_65mas',	'vac_srp_fem_m1',	'vac_srp_fem_1_4',	'vac_srp_fem_5_14',	
-'vac_srp_fem_15_24',	'vac_srp_fem_25_44',	'vac_srp_fem_45_64',	'vac_srp_mas_m1',	'vac_srp_mas_1_4',	'vac_srp_mas_5_14',	'vac_srp_mas_15_24',	'vac_srp_mas_25_44',	'vac_srp_mas_45_64',	'vactot_srp_mas_m1',
-'vactot_srp_mas_1_4',	'vactot_srp_mas_5_14',	'vactot_srp_mas_15_24',	'vactot_srp_mas_25_44',	'vactot_srp_mas_45_64',	'vac_dpt_fem_m1',	'vac_dpt_fem_1_4',	'vac_dpt_fem_5_14',	'vac_dpt_fem_15_24',
-'vac_dpt_fem_25_44',	'vac_dpt_fem_45_64',	'vac_dpt_fem_65mas',	'vac_dpt_mas_m1',	'vac_dpt_mas_1_4',	'vac_dpt_mas_5_14',	'vac_dpt_mas_15_24',	'vac_dpt_mas_25_44',	'vac_dpt_mas_45_64',	'vac_dpt_mas_65mas',
-'vactot_dpt_mas_m1',	'vactot_dpt_mas_1_4',	'vactot_dpt_mas_5_14',	'vactot_dpt_mas_15_24',	'vactot_dpt_mas_25_44',	'vactot_dpt_mas_45_64',	'vactot_dpt_mas_65mas',	'vac_dpt_fem_m1',	
-'vac_dpt_fem_1_4',	'vac_dpt_fem_5_14',	'vac_dpt_fem_15_24',	'vac_dpt_fem_25_44',	'vac_dpt_fem_45_64',	'vac_dpt_fem_65mas',	'vac_dpt_mas_m1',	'vac_dpt_mas_1_4',	'vac_dpt_mas_5_14',
-'vac_dpt_mas_15_24',	'vac_dpt_mas_25_44',	'vac_dpt_mas_45_64',	'vac_dpt_mas_65mas',	'vactot_dpt_mas_m1',	'vactot_dpt_mas_1_4',	'vactot_dpt_mas_5_14',	'vactot_dpt_mas_15_24',
-'vactot_dpt_mas_25_44',	'vactot_dpt_mas_45_64',	'vactot_dpt_mas_65mas',	'vac_tdpa_fem_m1',	'vac_tdpa_fem_1_4',	'vac_tdpa_fem_5_14',	'vac_tdpa_fem_15_24',	'vac_tdpa_fem_25_44',
-'vac_tdpa_fem_45_64',	'vac_tdpa_fem_65mas',	'vac_tdpa_mas_m1',	'vac_tdpa_mas_1_4',	'vac_tdpa_mas_5_14',	'vac_tdpa_mas_15_24',	'vac_tdpa_mas_25_44',	'vac_tdpa_mas_45_64',	'vac_tdpa_mas_65mas',
-'vactot_tdpa_mas_m1',	'vactot_tdpa_mas_1_4',	'vactot_tdpa_mas_5_14',	'vactot_tdpa_mas_15_24',	'vactot_tdpa_mas_25_44',	'vactot_tdpa_mas_45_64',	'vactot_tdpa_mas_65mas',	'vac_tdpa_fem_m1',
-'vac_tdpa_fem_1_4',	'vac_tdpa_fem_5_14',	'vac_tdpa_fem_15_24',	'vac_tdpa_fem_25_44',	'vac_tdpa_fem_45_64',	'vac_tdpa_fem_65mas',	'vac_tdpa_mas_m1',	'vac_tdpa_mas_1_4',	'vac_tdpa_mas_5_14',
-'vac_tdpa_mas_15_24',	'vac_tdpa_mas_25_44',	'vac_tdpa_mas_45_64',	'vac_tdpa_mas_65mas',	'vactot_tdpa_mas_m1',	'vactot_tdpa_mas_1_4',	'vactot_tdpa_mas_5_14',	'vactot_tdpa_mas_15_24',
-'vactot_tdpa_mas_25_44',	'vactot_tdpa_mas_45_64',	'vactot_tdpa_mas_65mas',	'vac_neu13_fem_m1',	'vac_neu13_fem_1_4',	'vac_neu13_fem_5_14',	'vac_neu13_fem_15_24',	'vac_neu13_fem_25_44',
-'vac_neu13_fem_45_64',	'vac_neu13_fem_65mas',	'vac_neu13_mas_m1',	'vac_neu13_mas_1_4',	'vac_neu13_mas_5_14',	'vac_neu13_mas_15_24',	'vac_neu13_mas_25_44',	'vac_neu13_mas_45_64',
-'vac_neu13_mas_65mas',	'vactot_neu13_mas_m1',	'vactot_neu13_mas_1_4',	'vactot_neu13_mas_5_14',	'vactot_neu13_mas_15_24',	'vactot_neu13_mas_25_44',	'vactot_neu13_mas_45_64',	'vactot_neu13_mas_65mas')
+fieldsAll <- c('AREA',	'FECHA',	'MUNICIPIO',	'LOCALIDAD',	'MOTIVO',	'TIPO',	'con_fem_m1',	'con_fem_1_4',	'con_fem_5_14',	'con_fem_15_24',	'con_fem_25_44',	'con_fem_45_64',	'con_fem_65mas',	'con_mas_m1',	'con_mas_1_4',	'con_mas_5_14',	'con_mas_15_24',	'con_mas_25_44',	'con_mas_45_64',	'con_mas_65mas',	'con_fem_nino_m1',	'con_fem_nino_1_4',	'con_fem_nino_5_14',	'con_mas_nino_m1',	'con_mas_nino_1_4',	'con_mas_nino_5_14',	'ansi_fem_5_14',	'ansi_fem_15_24',	'ansi_fem_25_44',	'ansi_fem_45_64',	'ansi_fem_65mas',	'ansi_mas_5_14',	'ansi_mas_15_24',	'ansi_mas_25_44',	'ansi_mas_45_64',	'ansi_mas_65mas',	'depre_fem_5_14',	'depre_fem_15_24',	'depre_fem_25_44',	'depre_fem_45_64',	'depre_fem_65mas',	'depre_mas_5_14',	'depre_mas_15_24',	'depre_mas_25_44',	'depre_mas_45_64',	'depre_mas_65mas',	'viol_4_14',	'viol_15_24',	'viol_25_44',	'viol_45_64',	'viol_65mas',	'adic_fem_m1',	'adic_fem_1_4',	'adic_fem_5_14',	'adic_fem_15_24',	'adic_fem_25_44',	'adic_fem_45_64',	'adic_fem_65mas',	'adic_mas_m1',	'adic_mas_1_4',	'adic_mas_5_14',	'adic_mas_15_24',	'adic_mas_25_44',	'adic_mas_45_64',	'adic_mas_65mas',	'exvis_fem_m1',	'exvis_fem_1_4',	'exvis_fem_5_14',	'exvis_fem_15_24',	'exvis_fem_25_44',	'exvis_fem_45_64',	'exvis_fem_65mas',	'exvis_mas_m1',	'exvis_mas_1_4',	'exvis_mas_5_14',	'exvis_mas_15_24',	'exvis_mas_25_44',	'exvis_mas_45_64',	'exvis_mas_65mas',	'det_enf_cronica',	'envej_fem_45_64',	'envej_fem_65mas',	'envej_mas_45_64',	'envej_mas_65mas',	'vih_fem_m1',	'vih_fem_1_4',	'vih_fem_5_14',	'vih_fem_15_24',	'vih_fem_25_44',	'vih_fem_45_64',	'vih_fem_65mas',	'vih_mas_m1',	'vih_mas_1_4',	'vih_mas_5_14',	'vih_mas_15_24',	'vih_mas_25_44',	'vih_mas_45_64',	'vih_mas_65mas',	'sifi_fem_m1',	'sifi_fem_1_4',
+               'sifi_fem_5_14',	'sifi_fem_15_24',	'sifi_fem_25_44',	'sifi_fem_45_64',	'sifi_fem_65mas',	'sifi_mas_m1',	'sifi_mas_1_4',	'sifi_mas_5_14',	'sifi_mas_15_24',	'sifi_mas_25_44',	'sifi_mas_45_64',	'sifi_mas_65mas',	'hepc_fem_m1',	'hepc_fem_1_4',	'hepc_fem_5_14',	'hepc_fem_15_24',	'hepc_fem_25_44',	'hepc_fem_45_64',	'hepc_fem_65mas',	'hepc_mas_m1',	'hepc_mas_1_4',	'hepc_mas_5_14',	'hepc_mas_15_24',	'hepc_mas_25_44',	'hepc_mas_45_64',	'hepc_mas_65mas',	'citologias',	'vph_25_44',	'vph_45_64',	'exploraciones',	'gluc_fem_m1',	'gluc_fem_1_4',	'gluc_fem_5_14',	'gluc_fem_15_24',	'gluc_fem_25_44',	'gluc_fem_45_64',	'gluc_fem_65mas',	'gluc_mas_m1',	'gluc_mas_1_4',	'gluc_mas_5_14',	'gluc_mas_15_24',	'gluc_mas_25_44',	'gluc_mas_45_64',	'gluc_mas_65mas',	'tamiz_fem_m1',	'tamiz_fem_1_4',	'tamiz_fem_5_14',	'tamiz_fem_15_24',	'tamiz_fem_25_44',	'tamiz_fem_45_64',	'tamiz_fem_65mas',	'tamiz_mas_m1',	'tamiz_mas_1_4',	'tamiz_mas_5_14',	'tamiz_mas_15_24',	'tamiz_mas_25_44',	'tamiz_mas_45_64',	'tamiz_mas_65mas',	'epi_fem_m1',	'epi_fem_1_4',	'epi_fem_5_14',	'epi_fem_15_24',	'epi_fem_25_44',	'epi_fem_45_64',	'epi_fem_65mas',	'epi_mas_m1',	'epi_mas_1_4',	'epi_mas_5_14',	'epi_mas_15_24',	'epi_mas_25_44',	'epi_mas_45_64',	'epi_mas_65mas',	'colera_fem_m1',	'colera_fem_1_4',	'colera_fem_5_14',	'colera_fem_15_24',	'colera_fem_25_44',	'colera_fem_45_64',	'colera_fem_65mas',	'colera_mas_m1',	'colera_mas_1_4',	'colera_mas_5_14',	'colera_mas_15_24',	'colera_mas_25_44',	'colera_mas_45_64',	'colera_mas_65mas',	'migrantes',	'indigenas',	'negocios_visi',	'escuelas_visi',	'iglesias_visi',	'lid_vecinal_visi',	'cas_promo',	'cas_ausentes',	'cas_renuen',	'cas_deshab',	'c_rehab',	'ceresos',	'campo_agri',	'albergue_migra',
+               'albergue_otro',	'caf_visita',	'mat_entrega',	'vso_entrega',	'p_ext_entrega',	'p_int_entrega',	'lubri_entrega',	'mecanismo',	'tematica',	'p_sensibilizadas',	'ester_cani_m',	'ester_cani_h',	'ester_feli_m',	'ester_feli_h',	'vac_cani_m',	'vac_cani_h',	'vac_feli_m',	'vac_feli_h',	'desp_cani_m',	'desp_cani_h',	'desp_feli_m',	'desp_feli_h',	'cont_larvario',	'recipientes_rev',	'cant_insect',	'p_ssani',	'p_ecobuq',	'casas_sanea',	'vac_vph_fem_m1',	'vac_vph_fem_1_4',	'vac_vph_fem_5_14',	'vac_vph_fem_15_24',	'vac_vph_fem_25_44',	'vac_vph_fem_45_64',	'vac_vph_fem_65mas',	'vac_vph_mas_m1',	'vac_vph_mas_1_4',	'vac_vph_mas_5_14',	'vac_vph_mas_15_24',	'vac_vph_mas_25_44',	'vac_vph_mas_45_64',	'vac_vph_mas_65mas',	'vactot_vph_mas_m1',	'vactot_vph_mas_1_4',	'vactot_vph_mas_5_14',	'vactot_vph_mas_15_24',	'vactot_vph_mas_25_44',	'vactot_vph_mas_45_64',	'vactot_vph_mas_65mas',	'vac_cov_fem_m1',	'vac_cov_fem_1_4',	'vac_cov_fem_5_14',	'vac_cov_fem_15_24',	'vac_cov_fem_25_44',	'vac_cov_fem_45_64',	'vac_cov_fem_65mas',	'vac_cov_mas_m1',	'vac_cov_mas_1_4',	'vac_cov_mas_5_14',	'vac_cov_mas_15_24',	'vac_cov_mas_25_44',	'vac_cov_mas_45_64',	'vac_cov_mas_65mas',	'vactot_cov_mas_m1',	'vactot_cov_mas_1_4',	'vactot_cov_mas_5_14',	'vactot_cov_mas_15_24',	'vactot_cov_mas_25_44',	'vactot_cov_mas_45_64',	'vactot_cov_mas_65mas',	'vac_hepab_fem_m1',	'vac_hepab_fem_1_4',	'vac_hepab_fem_5_14',	'vac_hepab_fem_15_24',	'vac_hepab_fem_25_44',	'vac_hepab_fem_45_64',	'vac_hepab_fem_65mas',	'vac_hepab_mas_m1',	'vac_hepab_mas_1_4',	'vac_hepab_mas_5_14',	'vac_hepab_mas_15_24',	'vac_hepab_mas_25_44',	'vac_hepab_mas_45_64',	'vac_hepab_mas_65mas',	'vactot_hepab_mas_m1',	'vactot_hepab_mas_1_4',	'vactot_hepab_mas_5_14',	'vactot_hepab_mas_15_24',	'vactot_hepab_mas_25_44',	'vactot_hepab_mas_45_64',	'vactot_hepab_mas_65mas',	'vac_flu_fem_m1',	'vac_flu_fem_1_4',	'vac_flu_fem_5_14',	'vac_flu_fem_15_24',	'vac_flu_fem_25_44',	'vac_flu_fem_45_64',	'vac_flu_fem_65mas',	'vac_flu_mas_m1',	'vac_flu_mas_1_4',
+               'vac_flu_mas_5_14',	'vac_flu_mas_15_24',	'vac_flu_mas_25_44',	'vac_flu_mas_45_64',	'vac_flu_mas_65mas',	'vactot_flu_mas_m1',	'vactot_flu_mas_1_4',	'vactot_flu_mas_5_14',	'vactot_flu_mas_15_24',	'vactot_flu_mas_25_44',	'vactot_flu_mas_45_64',	'vactot_flu_mas_65mas',	'vac_hexa_fem_m1',	'vac_hexa_fem_1_4',	'vac_hexa_fem_5_14',	'vac_hexa_fem_15_24',	'vac_hexa_fem_25_44',	'vac_hexa_fem_45_64',	'vac_hexa_fem_65mas',	'vac_hexa_mas_m1',	'vac_hexa_mas_1_4',	'vac_hexa_mas_5_14',	'vac_hexa_mas_15_24',	'vac_hexa_mas_25_44',	'vac_hexa_mas_45_64',	'vac_hexa_mas_65mas',	'vactot_hexa_mas_m1',	'vactot_hexa_mas_1_4',	'vactot_hexa_mas_5_14',	'vactot_hexa_mas_15_24',	'vactot_hexa_mas_25_44',	'vactot_hexa_mas_45_64',	'vactot_hexa_mas_65mas',	'vac_rota_fem_m1',	'vac_rota_fem_1_4',	'vac_rota_fem_5_14',	'vac_rota_fem_15_24',	'vac_rota_fem_25_44',	'vac_rota_fem_45_64',	'vac_rota_fem_65mas',	'vac_rota_mas_m1',	'vac_rota_mas_1_4',	'vac_rota_mas_5_14',	'vac_rota_mas_15_24',	'vac_rota_mas_25_44',	'vac_rota_mas_45_64',	'vac_rota_mas_65mas',	'vactot_rota_mas_m1',	'vactot_rota_mas_1_4',	'vactot_rota_mas_5_14',	'vactot_rota_mas_15_24',	'vactot_rota_mas_25_44',	'vactot_rota_mas_45_64',	'vactot_rota_mas_65mas',	'vac_neu23_fem_m1',	'vac_neu23_fem_1_4',	'vac_neu23_fem_5_14',	'vac_neu23_fem_15_24',	'vac_neu23_fem_25_44',	'vac_neu23_fem_45_64',	'vac_neu23_fem_65mas',	'vac_neu23_mas_m1',	'vac_neu23_mas_1_4',	'vac_neu23_mas_5_14',	'vac_neu23_mas_15_24',	'vac_neu23_mas_25_44',	'vac_neu23_mas_45_64',	'vac_neu23_mas_65mas',	'vactot_neu23_mas_m1',	'vactot_neu23_mas_1_4',	'vactot_neu23_mas_5_14',	'vactot_neu23_mas_15_24',	'vactot_neu23_mas_25_44',	'vactot_neu23_mas_45_64',	'vactot_neu23_mas_65mas',	'vac_sr_fem_m1',	'vac_sr_fem_1_4',	'vac_sr_fem_5_14',	'vac_sr_fem_15_24',	'vac_sr_fem_25_44',	'vac_sr_fem_45_64',	'vac_sr_fem_65mas',	'vac_sr_mas_m1',	'vac_sr_mas_1_4',	'vac_sr_mas_5_14',	'vac_sr_mas_15_24',	'vac_sr_mas_25_44',	'vac_sr_mas_45_64',	'vac_sr_mas_65mas',	'vactot_sr_mas_m1',	'vactot_sr_mas_1_4',	'vactot_sr_mas_5_14',	'vactot_sr_mas_15_24',	'vactot_sr_mas_25_44',	'vactot_sr_mas_45_64',	'vactot_sr_mas_65mas',	'vac_srp_fem_m1',	'vac_srp_fem_1_4',	'vac_srp_fem_5_14',	'vac_srp_fem_15_24',
+               'vac_srp_fem_25_44',	'vac_srp_fem_45_64',	'vac_srp_mas_m1',	'vac_srp_mas_1_4',	'vac_srp_mas_5_14',	'vac_srp_mas_15_24',	'vac_srp_mas_25_44',	'vac_srp_mas_45_64',	'vactot_srp_mas_m1',	'vactot_srp_mas_1_4',	'vactot_srp_mas_5_14',	'vactot_srp_mas_15_24',	'vactot_srp_mas_25_44',	'vactot_srp_mas_45_64',	'vac_dpt_fem_m1',	'vac_dpt_fem_1_4',	'vac_dpt_fem_5_14',	'vac_dpt_fem_15_24',	'vac_dpt_fem_25_44',	'vac_dpt_fem_45_64',	'vac_dpt_fem_65mas',	'vac_dpt_mas_m1',	'vac_dpt_mas_1_4',	'vac_dpt_mas_5_14',	'vac_dpt_mas_15_24',	'vac_dpt_mas_25_44',	'vac_dpt_mas_45_64',	'vac_dpt_mas_65mas',	'vactot_dpt_mas_m1',	'vactot_dpt_mas_1_4',	'vactot_dpt_mas_5_14',	'vactot_dpt_mas_15_24',	'vactot_dpt_mas_25_44',	'vactot_dpt_mas_45_64',	'vactot_dpt_mas_65mas',	'vac_bcg_fem_m1',	'vac_bcg_fem_1_4',	'vac_bcg_fem_5_14',	'vac_bcg_fem_15_24',	'vac_bcg_fem_25_44',	'vac_bcg_fem_45_64',	'vac_bcg_fem_65mas',	'vac_bcg_mas_m1',	'vac_bcg_mas_1_4',	'vac_bcg_mas_5_14',	'vac_bcg_mas_15_24',	'vac_bcg_mas_25_44',	'vac_bcg_mas_45_64',	'vac_bcg_mas_65mas',	'vactot_bcg_mas_m1',	'vactot_bcg_mas_1_4',	'vactot_bcg_mas_5_14',	'vactot_bcg_mas_15_24',	'vactot_bcg_mas_25_44',	'vactot_bcg_mas_45_64',	'vactot_bcg_mas_65mas',	'vac_tdpa_fem_m1',	'vac_tdpa_fem_1_4',	'vac_tdpa_fem_5_14',	'vac_tdpa_fem_15_24',	'vac_tdpa_fem_25_44',	'vac_tdpa_fem_45_64',	'vac_tdpa_fem_65mas',	'vac_tdpa_mas_m1',	'vac_tdpa_mas_1_4',	'vac_tdpa_mas_5_14',	'vac_tdpa_mas_15_24',	'vac_tdpa_mas_25_44',	'vac_tdpa_mas_45_64',	'vac_tdpa_mas_65mas',	'vactot_tdpa_mas_m1',	'vactot_tdpa_mas_1_4',	'vactot_tdpa_mas_5_14',	'vactot_tdpa_mas_15_24',	'vactot_tdpa_mas_25_44',	'vactot_tdpa_mas_45_64',	'vactot_tdpa_mas_65mas',	'vac_td_fem_m1',	'vac_td_fem_1_4',	'vac_td_fem_5_14',	'vac_td_fem_15_24',	'vac_td_fem_25_44',	'vac_td_fem_45_64',	'vac_td_fem_65mas',	'vac_td_mas_m1',	'vac_td_mas_1_4',	'vac_td_mas_5_14',	'vac_td_mas_15_24',	'vac_td_mas_25_44',	'vac_td_mas_45_64',	'vac_td_mas_65mas',	'vactot_td_mas_m1',	'vactot_td_mas_1_4',	'vactot_td_mas_5_14',	'vactot_td_mas_15_24',	'vactot_td_mas_25_44',	'vactot_td_mas_45_64',	'vactot_td_mas_65mas',	'vac_neu13_fem_m1',	'vac_neu13_fem_1_4',
+               'vac_neu13_fem_5_14',	'vac_neu13_fem_15_24',	'vac_neu13_fem_25_44',	'vac_neu13_fem_45_64',	'vac_neu13_fem_65mas',	'vac_neu13_mas_m1',	'vac_neu13_mas_1_4',	'vac_neu13_mas_5_14',	'vac_neu13_mas_15_24',	'vac_neu13_mas_25_44',	'vac_neu13_mas_45_64',	'vac_neu13_mas_65mas',	'vactot_neu13_mas_m1',	'vactot_neu13_mas_1_4',	'vactot_neu13_mas_5_14',	'vactot_neu13_mas_15_24',	'vactot_neu13_mas_25_44',	'vactot_neu13_mas_45_64',	'vactot_neu13_mas_65mas'
+               )
 
 
 
@@ -195,7 +151,7 @@ ui <- dashboardPage(skin = 'red',
                                     fluidRow(
                                       column(12, 
                                     selectInput(inputId = 'AREA', 
-                                                   label = 'Selecciona el área de captura:',
+                                                   label = labelMandatory('Selecciona el área de captura:'),
                                                    choices = respuestas %>% select(AREA_CAPTURA) %>% filter(!is.na(AREA_CAPTURA)), 
                                                 selected = '')
                                     )
@@ -203,31 +159,31 @@ ui <- dashboardPage(skin = 'red',
                                     fluidRow(
                                     column(4, wellPanel(
                                     dateInput(inputId = 'FECHA',
-                                              label = 'Selecciona la fecha en la que se realizaron las acciones:',
+                                              label = labelMandatory('Selecciona la fecha en la que se realizaron las acciones'),
                                               format = 'dd-mm-yyyy',
                                               language = 'es'),
                                     selectInput(inputId = 'DISTRITO', 
-                                                label = 'Distrito de Salud donde se realizaron las acciones:',
+                                                label = labelMandatory('Distrito de Salud donde se realizaron las acciones'),
                                                 choices = sort(unique(catalogo$DISTRITO)), 
                                                 selected = '')
                                     )),
                                     column(4, wellPanel(
                                     selectInput(inputId = 'MUNICIPIO', 
-                                                label = 'Seleccione municipio', 
+                                                label = labelMandatory('Seleccione municipio'), 
                                                 choices = unique(catalogo$NOM_MUN), 
                                                 selected = ''),
                                     selectInput(inputId = 'LOCALIDAD', 
-                                                label = 'Seleccione localidad', 
+                                                label = labelMandatory('Seleccione localidad'), 
                                                 choices = NULL, 
                                                 selected = '')
                                     )),
                                     column(4, wellPanel(
                                     selectInput(inputId = 'MOTIVO', 
-                                                label = 'Motivo de la intervención:', 
+                                                label = labelMandatory('Motivo de la intervención'), 
                                                 choices = respuestas %>% select(MOTIVO_INT) %>% filter(!is.na(MOTIVO_INT)), 
                                                 selected = ''),
                                     selectInput(inputId = 'TIPO', 
-                                                label = 'Tipo de intervención:', 
+                                                label = labelMandatory('Tipo de intervención'), 
                                                 choices = respuestas %>% select(TIPO_INT) %>% filter(!is.na(TIPO_INT)), 
                                                 selected = '')
                                     ))
@@ -927,31 +883,31 @@ ui <- dashboardPage(skin = 'red',
                                    h4('SR'),
                                    fluidRow(
                                      column(4,
-                                            numericInput('vac_srp_fem_m1', 'Femenino < 1 año', 0),
-                                            numericInput('vac_srp_fem_1_4', 'Femenino de 1-4 años', 0),
-                                            numericInput('vac_srp_fem_5_14', 'Femenino de 5-14 años', 0),
-                                            numericInput('vac_srp_fem_15_24', 'Femenino de 15-24 años', 0),
-                                            numericInput('vac_srp_fem_25_44', 'Femenino de 25-44 años', 0),
-                                            numericInput('vac_srp_fem_45_64', 'Femenino de 45-64 años', 0),
-                                            numericInput('vac_srp_fem_65mas', 'Femenino de 65 y más', 0)
+                                            numericInput('vac_sr_fem_m1', 'Femenino < 1 año', 0),
+                                            numericInput('vac_sr_fem_1_4', 'Femenino de 1-4 años', 0),
+                                            numericInput('vac_sr_fem_5_14', 'Femenino de 5-14 años', 0),
+                                            numericInput('vac_sr_fem_15_24', 'Femenino de 15-24 años', 0),
+                                            numericInput('vac_sr_fem_25_44', 'Femenino de 25-44 años', 0),
+                                            numericInput('vac_sr_fem_45_64', 'Femenino de 45-64 años', 0),
+                                            numericInput('vac_sr_fem_65mas', 'Femenino de 65 y más', 0)
                                      ),
                                      column(4,
-                                            numericInput('vac_srp_mas_m1', 'Masculino < 1 año', 0),
-                                            numericInput('vac_srp_mas_1_4', 'Masculino de 1-4 años', 0),
-                                            numericInput('vac_srp_mas_5_14', 'Masculino de 5-14 años', 0),
-                                            numericInput('vac_srp_mas_15_24', 'Masculino de 15-24 años', 0),
-                                            numericInput('vac_srp_mas_25_44', 'Masculino de 25-44 años', 0),
-                                            numericInput('vac_srp_mas_45_64', 'Masculino de 45-64 años', 0),
-                                            numericInput('vac_srp_mas_65mas', 'Masculino de 65 y más', 0)
+                                            numericInput('vac_sr_mas_m1', 'Masculino < 1 año', 0),
+                                            numericInput('vac_sr_mas_1_4', 'Masculino de 1-4 años', 0),
+                                            numericInput('vac_sr_mas_5_14', 'Masculino de 5-14 años', 0),
+                                            numericInput('vac_sr_mas_15_24', 'Masculino de 15-24 años', 0),
+                                            numericInput('vac_sr_mas_25_44', 'Masculino de 25-44 años', 0),
+                                            numericInput('vac_sr_mas_45_64', 'Masculino de 45-64 años', 0),
+                                            numericInput('vac_sr_mas_65mas', 'Masculino de 65 y más', 0)
                                      ),
                                      column(4,
-                                            numericInput('vactot_srp_mas_m1', 'Total < 1 año', 0),
-                                            numericInput('vactot_srp_mas_1_4', 'Total de 1-4 años', 0),
-                                            numericInput('vactot_srp_mas_5_14', 'Total de 5-14 años', 0),
-                                            numericInput('vactot_srp_mas_15_24', 'Total de 15-24 años', 0),
-                                            numericInput('vactot_srp_mas_25_44', 'Total de 25-44 años', 0),
-                                            numericInput('vactot_srp_mas_45_64', 'Total de 45-64 años', 0),
-                                            numericInput('vactot_srp_mas_65mas', 'Total de 65 y más', 0)
+                                            numericInput('vactot_sr_mas_m1', 'Total < 1 año', 0),
+                                            numericInput('vactot_sr_mas_1_4', 'Total de 1-4 años', 0),
+                                            numericInput('vactot_sr_mas_5_14', 'Total de 5-14 años', 0),
+                                            numericInput('vactot_sr_mas_15_24', 'Total de 15-24 años', 0),
+                                            numericInput('vactot_sr_mas_25_44', 'Total de 25-44 años', 0),
+                                            numericInput('vactot_sr_mas_45_64', 'Total de 45-64 años', 0),
+                                            numericInput('vactot_sr_mas_65mas', 'Total de 65 y más', 0)
                                      )
                                    ),
                                    hr(),
@@ -1020,31 +976,31 @@ ui <- dashboardPage(skin = 'red',
                                    h4('BCG'),
                                    fluidRow(
                                      column(4,
-                                            numericInput('vac_dpt_fem_m1', 'Femenino < 1 año', 0),
-                                            numericInput('vac_dpt_fem_1_4', 'Femenino de 1-4 años', 0),
-                                            numericInput('vac_dpt_fem_5_14', 'Femenino de 5-14 años', 0),
-                                            numericInput('vac_dpt_fem_15_24', 'Femenino de 15-24 años', 0),
-                                            numericInput('vac_dpt_fem_25_44', 'Femenino de 25-44 años', 0),
-                                            numericInput('vac_dpt_fem_45_64', 'Femenino de 45-64 años', 0),
-                                            numericInput('vac_dpt_fem_65mas', 'Femenino de 65 y más', 0)
+                                            numericInput('vac_bcg_fem_m1', 'Femenino < 1 año', 0),
+                                            numericInput('vac_bcg_fem_1_4', 'Femenino de 1-4 años', 0),
+                                            numericInput('vac_bcg_fem_5_14', 'Femenino de 5-14 años', 0),
+                                            numericInput('vac_bcg_fem_15_24', 'Femenino de 15-24 años', 0),
+                                            numericInput('vac_bcg_fem_25_44', 'Femenino de 25-44 años', 0),
+                                            numericInput('vac_bcg_fem_45_64', 'Femenino de 45-64 años', 0),
+                                            numericInput('vac_bcg_fem_65mas', 'Femenino de 65 y más', 0)
                                      ),
                                      column(4,
-                                            numericInput('vac_dpt_mas_m1', 'Masculino < 1 año', 0),
-                                            numericInput('vac_dpt_mas_1_4', 'Masculino de 1-4 años', 0),
-                                            numericInput('vac_dpt_mas_5_14', 'Masculino de 5-14 años', 0),
-                                            numericInput('vac_dpt_mas_15_24', 'Masculino de 15-24 años', 0),
-                                            numericInput('vac_dpt_mas_25_44', 'Masculino de 25-44 años', 0),
-                                            numericInput('vac_dpt_mas_45_64', 'Masculino de 45-64 años', 0),
-                                            numericInput('vac_dpt_mas_65mas', 'Masculino de 65 y más', 0)
+                                            numericInput('vac_bcg_mas_m1', 'Masculino < 1 año', 0),
+                                            numericInput('vac_bcg_mas_1_4', 'Masculino de 1-4 años', 0),
+                                            numericInput('vac_bcg_mas_5_14', 'Masculino de 5-14 años', 0),
+                                            numericInput('vac_bcg_mas_15_24', 'Masculino de 15-24 años', 0),
+                                            numericInput('vac_bcg_mas_25_44', 'Masculino de 25-44 años', 0),
+                                            numericInput('vac_bcg_mas_45_64', 'Masculino de 45-64 años', 0),
+                                            numericInput('vac_bcg_mas_65mas', 'Masculino de 65 y más', 0)
                                      ),
                                      column(4,
-                                            numericInput('vactot_dpt_mas_m1', 'Total < 1 año', 0),
-                                            numericInput('vactot_dpt_mas_1_4', 'Total de 1-4 años', 0),
-                                            numericInput('vactot_dpt_mas_5_14', 'Total de 5-14 años', 0),
-                                            numericInput('vactot_dpt_mas_15_24', 'Total de 15-24 años', 0),
-                                            numericInput('vactot_dpt_mas_25_44', 'Total de 25-44 años', 0),
-                                            numericInput('vactot_dpt_mas_45_64', 'Total de 45-64 años', 0),
-                                            numericInput('vactot_dpt_mas_65mas', 'Total de 65 y más', 0)
+                                            numericInput('vactot_bcg_mas_m1', 'Total < 1 año', 0),
+                                            numericInput('vactot_bcg_mas_1_4', 'Total de 1-4 años', 0),
+                                            numericInput('vactot_bcg_mas_5_14', 'Total de 5-14 años', 0),
+                                            numericInput('vactot_bcg_mas_15_24', 'Total de 15-24 años', 0),
+                                            numericInput('vactot_bcg_mas_25_44', 'Total de 25-44 años', 0),
+                                            numericInput('vactot_bcg_mas_45_64', 'Total de 45-64 años', 0),
+                                            numericInput('vactot_bcg_mas_65mas', 'Total de 65 y más', 0)
                                      )
                                    ),
                                    hr(),
@@ -1082,31 +1038,31 @@ ui <- dashboardPage(skin = 'red',
                                    h4('TD'),
                                    fluidRow(
                                      column(4,
-                                            numericInput('vac_tdpa_fem_m1', 'Femenino < 1 año', 0),
-                                            numericInput('vac_tdpa_fem_1_4', 'Femenino de 1-4 años', 0),
-                                            numericInput('vac_tdpa_fem_5_14', 'Femenino de 5-14 años', 0),
-                                            numericInput('vac_tdpa_fem_15_24', 'Femenino de 15-24 años', 0),
-                                            numericInput('vac_tdpa_fem_25_44', 'Femenino de 25-44 años', 0),
-                                            numericInput('vac_tdpa_fem_45_64', 'Femenino de 45-64 años', 0),
-                                            numericInput('vac_tdpa_fem_65mas', 'Femenino de 65 y más', 0)
+                                            numericInput('vac_td_fem_m1', 'Femenino < 1 año', 0),
+                                            numericInput('vac_td_fem_1_4', 'Femenino de 1-4 años', 0),
+                                            numericInput('vac_td_fem_5_14', 'Femenino de 5-14 años', 0),
+                                            numericInput('vac_td_fem_15_24', 'Femenino de 15-24 años', 0),
+                                            numericInput('vac_td_fem_25_44', 'Femenino de 25-44 años', 0),
+                                            numericInput('vac_td_fem_45_64', 'Femenino de 45-64 años', 0),
+                                            numericInput('vac_td_fem_65mas', 'Femenino de 65 y más', 0)
                                      ),
                                      column(4,
-                                            numericInput('vac_tdpa_mas_m1', 'Masculino < 1 año', 0),
-                                            numericInput('vac_tdpa_mas_1_4', 'Masculino de 1-4 años', 0),
-                                            numericInput('vac_tdpa_mas_5_14', 'Masculino de 5-14 años', 0),
-                                            numericInput('vac_tdpa_mas_15_24', 'Masculino de 15-24 años', 0),
-                                            numericInput('vac_tdpa_mas_25_44', 'Masculino de 25-44 años', 0),
-                                            numericInput('vac_tdpa_mas_45_64', 'Masculino de 45-64 años', 0),
-                                            numericInput('vac_tdpa_mas_65mas', 'Masculino de 65 y más', 0)
+                                            numericInput('vac_td_mas_m1', 'Masculino < 1 año', 0),
+                                            numericInput('vac_td_mas_1_4', 'Masculino de 1-4 años', 0),
+                                            numericInput('vac_td_mas_5_14', 'Masculino de 5-14 años', 0),
+                                            numericInput('vac_td_mas_15_24', 'Masculino de 15-24 años', 0),
+                                            numericInput('vac_td_mas_25_44', 'Masculino de 25-44 años', 0),
+                                            numericInput('vac_td_mas_45_64', 'Masculino de 45-64 años', 0),
+                                            numericInput('vac_td_mas_65mas', 'Masculino de 65 y más', 0)
                                      ),
                                      column(4,
-                                            numericInput('vactot_tdpa_mas_m1', 'Total < 1 año', 0),
-                                            numericInput('vactot_tdpa_mas_1_4', 'Total de 1-4 años', 0),
-                                            numericInput('vactot_tdpa_mas_5_14', 'Total de 5-14 años', 0),
-                                            numericInput('vactot_tdpa_mas_15_24', 'Total de 15-24 años', 0),
-                                            numericInput('vactot_tdpa_mas_25_44', 'Total de 25-44 años', 0),
-                                            numericInput('vactot_tdpa_mas_45_64', 'Total de 45-64 años', 0),
-                                            numericInput('vactot_tdpa_mas_65mas', 'Total de 65 y más', 0)
+                                            numericInput('vactot_td_mas_m1', 'Total < 1 año', 0),
+                                            numericInput('vactot_td_mas_1_4', 'Total de 1-4 años', 0),
+                                            numericInput('vactot_td_mas_5_14', 'Total de 5-14 años', 0),
+                                            numericInput('vactot_td_mas_15_24', 'Total de 15-24 años', 0),
+                                            numericInput('vactot_td_mas_25_44', 'Total de 25-44 años', 0),
+                                            numericInput('vactot_td_mas_45_64', 'Total de 45-64 años', 0),
+                                            numericInput('vactot_td_mas_65mas', 'Total de 65 y más', 0)
                                      )
                                    ),
                                    hr(),
@@ -1176,10 +1132,10 @@ server <- function(input, output, session) {
   })
   
   
-  # action to take when submit button is pressed
-  #  observeEvent(input$submit, {
-  #    saveData(formData())
-  #  })
+   #action to take when submit button is pressed
+   #observeEvent(input$submit, {
+   #  saveData(formData())
+   #})
   
   
   observe({
